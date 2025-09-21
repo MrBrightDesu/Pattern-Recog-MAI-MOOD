@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  mai-mood-coach-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    container_name: mai-mood-coach-dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - mai-mood-coach-dev-network
+
+networks:
+  mai-mood-coach-dev-network:
+    driver: bridge

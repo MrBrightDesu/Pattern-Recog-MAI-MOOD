@@ -1,0 +1,395 @@
+.activity-recommendation {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.recommendation-header {
+  margin-bottom: 2rem;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.back-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.emotion-result {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.emotion-display {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.emotion-emoji {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.emotion-info h2 {
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.emotion-info p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+}
+
+.recommendations-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 2rem;
+}
+
+.recommendations-section h3 {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.recommendations-section p {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.activities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.activity-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.activity-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.activity-icon {
+  font-size: 2rem;
+}
+
+.activity-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.activity-category {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.completed-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #10B981;
+}
+
+.activity-title {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.activity-description {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.activity-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+}
+
+.detail-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.complete-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: none;
+  background: #10B981;
+  color: white;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.complete-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.completed-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.completion-celebration {
+  background: linear-gradient(135deg, #10B981, #059669);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+  color: white;
+}
+
+.celebration-icon {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.completion-celebration h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.completion-celebration p {
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .recommendation-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .back-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  
+  .emotion-result {
+    padding: 1.5rem;
+  }
+  
+  .emotion-display {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .emotion-emoji {
+    font-size: 3rem;
+  }
+  
+  .emotion-info h2 {
+    font-size: 1.5rem;
+  }
+  
+  .emotion-info p {
+    font-size: 1rem;
+  }
+  
+  .recommendations-section {
+    padding: 1.5rem;
+  }
+  
+  .recommendations-section h3 {
+    font-size: 1.25rem;
+  }
+  
+  .activities-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .activity-card {
+    padding: 1rem;
+  }
+  
+  .activity-title {
+    font-size: 1.1rem;
+  }
+  
+  .activity-description {
+    font-size: 0.9rem;
+  }
+  
+  .activity-details {
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .detail-item {
+    font-size: 0.8rem;
+  }
+  
+  .complete-btn, .completed-status {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  .completion-celebration {
+    padding: 1.5rem;
+  }
+  
+  .completion-celebration h4 {
+    font-size: 1.1rem;
+  }
+  
+  .celebration-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .emotion-result {
+    padding: 1rem;
+  }
+  
+  .emotion-emoji {
+    font-size: 2.5rem;
+  }
+  
+  .emotion-info h2 {
+    font-size: 1.25rem;
+  }
+  
+  .emotion-info p {
+    font-size: 0.9rem;
+  }
+  
+  .recommendations-section {
+    padding: 1rem;
+  }
+  
+  .recommendations-section h3 {
+    font-size: 1.1rem;
+  }
+  
+  .activity-card {
+    padding: 0.75rem;
+  }
+  
+  .activity-title {
+    font-size: 1rem;
+  }
+  
+  .activity-description {
+    font-size: 0.85rem;
+  }
+  
+  .activity-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .activity-meta {
+    align-self: flex-end;
+  }
+  
+  .completion-celebration {
+    padding: 1rem;
+  }
+  
+  .completion-celebration h4 {
+    font-size: 1rem;
+  }
+  
+  .celebration-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+}

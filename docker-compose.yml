@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mai-mood-coach:
+    build: .
+    ports:
+      - "3000:3000"
+    container_name: mai-mood-coach-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - mai-mood-coach-network
+
+networks:
+  mai-mood-coach-network:
+    driver: bridge

@@ -25,7 +25,11 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+<<<<<<< HEAD
 # python venv
 .venv/
 venv/
 ENV/
+=======
+Pattern-Recog-MAI-MOOD/
+>>>>>>> ffa0f9794429b95b631954d570a22748a98a8dd8

@@ -25,3 +25,7 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# python venv
+.venv/
+venv/
+ENV/

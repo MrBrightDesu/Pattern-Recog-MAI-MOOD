@@ -182,7 +182,26 @@ const ActivityRecommendation = ({ emotion, onActivityCompleted, onBackToDetectio
     ]
   };
 
-  const activities = activityRecommendations[emotion?.name] || [];
+  const normalizeEmotion = (emo) => {
+    // Accept string ("happy") or object ({ name/emoji/confidence }) or backend payload ({ emotion: "happy" })
+    const rawName = (typeof emo === 'string') ? emo : (emo?.name || emo?.emotion || 'Neutral');
+    const name = String(rawName).trim();
+    const titleName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    const emoji = emo?.emoji || {
+      Happy: '😊',
+      Sad: '😢',
+      Angry: '😠',
+      Surprised: '😲',
+      Fearful: '😨',
+      Disgusted: '🤢',
+      Neutral: '😐'
+    }[titleName] || '🙂';
+    const confidence = typeof emo?.confidence === 'number' ? emo.confidence : undefined;
+    return { name: titleName, emoji, confidence };
+  };
+
+  const norm = normalizeEmotion(emotion);
+  const activities = activityRecommendations[norm.name] || activityRecommendations['Neutral'] || [];
 
   const handleActivityComplete = (activity) => {
     setCompletedActivities(prev => new Set([...prev, activity.id]));
@@ -218,10 +237,12 @@ const ActivityRecommendation = ({ emotion, onActivityCompleted, onBackToDetectio
         
         <div className="emotion-result">
           <div className="emotion-display">
-            <span className="emotion-emoji">{emotion?.emoji}</span>
+            <span className="emotion-emoji">{norm.emoji}</span>
             <div className="emotion-info">
-              <h2>อารมณ์: {emotion?.name}</h2>
-              <p>ความมั่นใจ: {Math.round(emotion?.confidence * 100)}%</p>
+              <h2>อารมณ์: {norm.name}</h2>
+              {typeof norm.confidence === 'number' && (
+                <p>ความมั่นใจ: {Math.round(norm.confidence * 100)}%</p>
+              )}
             </div>
           </div>
         </div>

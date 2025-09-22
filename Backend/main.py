@@ -1,13 +1,10 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
-from PIL import Image
 import numpy as np
 import cv2
-import torch
-import io
 
-from app.model import model, class_names, device
-from app.utils import detect_and_crop_face, predict_face_image
+from Backend.model_image import model, classes as class_names
+from Backend.utlis import detect_and_crop_face, predict_face_image
 
 app = FastAPI(title="Emotion Detection API")
 

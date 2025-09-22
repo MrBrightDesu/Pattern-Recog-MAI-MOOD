@@ -5,7 +5,7 @@ from torchvision import transforms
 from PIL import Image
 import torch
 
-from app.model import model, device, class_names
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 mtcnn_detector = MTCNN()
 

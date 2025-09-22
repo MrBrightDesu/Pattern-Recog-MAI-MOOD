@@ -15,20 +15,27 @@ def detect_with_haar_cascade(img, target_size=(224, 224)):
     """
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4)
+    faces = face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=5,
+        minSize=(40, 40)
+    )
     if len(faces) == 0:
         print("⚠️ ไม่พบหน้าในภาพ (Haar Cascade)")
         return None, None
 
-    print("👤 พบหน้า (Haar Cascade)")
-    x, y, w, h = faces[0]
+    # เลือกหน้าที่ใหญ่ที่สุดเพื่อความแม่นยำของครอป
+    x, y, w, h = max(faces, key=lambda b: b[2] * b[3])
+    print("👤 พบหน้า (Haar Cascade) ขนาด:", w, h)
 
     H, W = img.shape[0], img.shape[1]
-    padding = 20
-    x1 = max(0, int(x - padding))
-    y1 = max(0, int(y - padding))
-    x2 = min(W, int(x + w + padding))
-    y2 = min(H, int(y + h + padding))
+    # ใช้ padding ตามสัดส่วนใบหน้า (ช่วยให้พอดีมากขึ้นกว่าค่าคงที่)
+    pad = int(round(0.2 * max(w, h)))
+    x1 = max(0, int(x - pad))
+    y1 = max(0, int(y - pad))
+    x2 = min(W, int(x + w + pad))
+    y2 = min(H, int(y + h + pad))
 
     if x2 <= x1 or y2 <= y1:
         return None, None
@@ -51,9 +58,18 @@ def detect_and_crop_face(img, target_size=(224, 224), use_anime_detection=True):
             if len(faces) == 0:
                 print("⚠️ ไม่พบหน้าในภาพ (MTCNN)")
                 return detect_with_haar_cascade(img, target_size)
-
-            face_data = faces[0]
+            # เลือกหน้าที่มั่นใจสูงสุด/ใหญ่สุด
+            face_data = max(
+                faces,
+                key=lambda f: (f.get('confidence', 0), (f['box'][2] * f['box'][3]))
+            )
             x, y, w, h = face_data['box']
+            # clamp และปัดเป็น int
+            H, W = img_rgb.shape[0], img_rgb.shape[1]
+            x = max(0, int(round(x)))
+            y = max(0, int(round(y)))
+            w = max(1, int(round(w)))
+            h = max(1, int(round(h)))
             confidence = face_data.get('confidence', None)
             if confidence is not None:
                 try:
@@ -68,13 +84,13 @@ def detect_and_crop_face(img, target_size=(224, 224), use_anime_detection=True):
     else:
         return detect_with_haar_cascade(img, target_size)
 
-    # Crop หน้า (เพิ่ม padding)
+    # Crop หน้า (padding ตามสัดส่วนใบหน้า)
     H, W = img_rgb.shape[0], img_rgb.shape[1]
-    padding = 30
-    x1 = max(0, int(round(x - padding)))
-    y1 = max(0, int(round(y - padding)))
-    x2 = min(W, int(round(x + w + padding)))
-    y2 = min(H, int(round(y + h + padding)))
+    pad = int(round(0.2 * max(w, h)))
+    x1 = max(0, x - pad)
+    y1 = max(0, y - pad)
+    x2 = min(W, x + w + pad)
+    y2 = min(H, y + h + pad)
 
     if x2 <= x1 or y2 <= y1:
         return None, None

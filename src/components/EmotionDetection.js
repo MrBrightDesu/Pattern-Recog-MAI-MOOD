@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Upload, Image, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Pause, RotateCcw, Upload, Image, X, Camera, CameraOff } from 'lucide-react';
 import './EmotionDetection.css';
 
 const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }) => {
@@ -8,6 +8,11 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const [uploadedFile, setUploadedFile] = useState(null);
   const [result, setResult] = useState(null);
   const [lastResponseJson, setLastResponseJson] = useState('');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [stream, setStream] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // ฟังก์ชันสำหรับกำหนดสีตามอารมณ์
   const getEmotionColor = (emotion) => {
@@ -117,8 +122,118 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setResult(null);
     setUploadedFile(null);
     setLastResponseJson('');
+    stopCamera(); // ปิดกล้องด้วย
     if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตอารมณ์เป็น neutral
   };
+
+  // ฟังก์ชันสำหรับเปิดกล้อง
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
+      console.log('Starting camera...');
+      
+      // ปิด stream เดิมถ้ามี
+      if (stream) {
+        console.log('Stopping existing stream...');
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: 'user'
+        } 
+      });
+      console.log('Camera stream obtained:', mediaStream);
+      setStream(mediaStream);
+      setIsCameraOpen(true);
+      console.log('Camera opened successfully');
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setCameraError(`ไม่สามารถเข้าถึงกล้องได้: ${error.message}`);
+    }
+  };
+
+  // ฟังก์ชันสำหรับปิดกล้อง
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setIsCameraOpen(false);
+    setCameraError(null);
+  };
+
+  // ฟังก์ชันสำหรับถ่ายรูป
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Reverse ภาพใน Canvas เพื่อให้เหมือนกล้องหน้าจริง ๆ
+      context.save();
+      context.scale(-1, 1); // Reverse แนวนอน
+      context.drawImage(video, -canvas.width, 0); // วาดภาพที่ตำแหน่งที่ reverse แล้ว
+      context.restore();
+      
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+          setUploadedFile(file);
+          setSelectedImage(URL.createObjectURL(blob));
+          await analyzeFile(file);
+        }
+      }, 'image/jpeg', 0.8);
+    }
+  };
+
+  // จัดการ video element เมื่อ stream เปลี่ยน
+  useEffect(() => {
+    console.log('Stream useEffect triggered, stream:', stream, 'videoRef:', videoRef.current);
+    if (stream && videoRef.current) {
+      console.log('Setting video srcObject and playing...');
+      videoRef.current.srcObject = stream;
+      
+      // รอให้ video element พร้อมแล้วค่อยเล่น
+      const playVideo = () => {
+        if (videoRef.current) {
+          videoRef.current.play().then(() => {
+            console.log('Video started playing successfully');
+          }).catch((error) => {
+            console.error('Error playing video:', error);
+          });
+        }
+      };
+      
+      // ถ้า video พร้อมแล้วให้เล่นเลย
+      if (videoRef.current.readyState >= 3) {
+        playVideo();
+      } else {
+        // ถ้ายังไม่พร้อมให้รอ
+        videoRef.current.addEventListener('canplay', playVideo, { once: true });
+      }
+    }
+  }, [stream]);
+
+  // จัดการ isCameraOpen state
+  useEffect(() => {
+    console.log('isCameraOpen changed to:', isCameraOpen);
+  }, [isCameraOpen]);
+
+  // Cleanup เมื่อ component unmount
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
 
 
   return (
@@ -149,6 +264,55 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
                 <X className="remove-icon" />
               </button>
             </div>
+          ) : isCameraOpen ? (
+            <div className="camera-container">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="camera-video"
+                onLoadedMetadata={() => {
+                  console.log('Video loaded metadata');
+                  if (videoRef.current) {
+                    videoRef.current.play().catch(console.error);
+                  }
+                }}
+                onError={(e) => {
+                  console.error('Video error:', e);
+                  setCameraError('เกิดข้อผิดพลาดในการแสดงวิดีโอ');
+                }}
+                onCanPlay={() => {
+                  console.log('Video can play');
+                }}
+                onPlay={() => {
+                  console.log('Video started playing');
+                }}
+              />
+              {cameraError && (
+                <div className="camera-error">
+                  <p>{cameraError}</p>
+                </div>
+              )}
+              <div className="camera-controls">
+                <button
+                  className="capture-btn"
+                  onClick={capturePhoto}
+                  title="ถ่ายรูป"
+                >
+                  <Camera className="btn-icon" />
+                  ถ่ายรูป
+                </button>
+                <button
+                  className="stop-camera-btn"
+                  onClick={stopCamera}
+                  title="ปิดกล้อง"
+                >
+                  <CameraOff className="btn-icon" />
+                  ปิดกล้อง
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="upload-area">
               <div className="upload-content">
@@ -177,6 +341,19 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
         </div>
       </div>
 
+      {!selectedImage && !isCameraOpen && (
+        <div className="camera-toggle">
+          <button
+            className="camera-btn"
+            onClick={startCamera}
+            title="เปิดกล้อง"
+          >
+            <Camera className="btn-icon" />
+            เปิดกล้อง
+          </button>
+        </div>
+      )}
+
       {uploadedFile && (
         <div className="detection-controls">
           {!isDetecting ? (
@@ -188,6 +365,36 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
             <button className="stop-btn" onClick={handleStopDetection}>
               <Pause className="btn-icon" />
               หยุดการวิเคราะห์
+            </button>
+          )}
+          
+          {selectedImage && (
+            <button 
+              className="retake-btn" 
+              onClick={async () => {
+                console.log('Retake button clicked');
+                console.log('Current stream:', stream);
+                console.log('Current isCameraOpen:', isCameraOpen);
+                
+                setSelectedImage(null);
+                setUploadedFile(null);
+                setResult(null);
+                if (onEmotionChange) onEmotionChange('neutral');
+                
+                // รีเซ็ตกล้องและเปิดใหม่
+                console.log('Resetting camera state...');
+                setIsCameraOpen(false);
+                
+                // รอสักครู่แล้วเปิดกล้องใหม่
+                setTimeout(async () => {
+                  console.log('Starting camera after reset...');
+                  await startCamera();
+                }, 100);
+              }}
+              title="ถ่ายซ้ำ"
+            >
+              <Camera className="btn-icon" />
+              ถ่ายซ้ำ
             </button>
           )}
           
@@ -220,6 +427,9 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
           }}>{lastResponseJson}</pre>
         </div>
       )}
+
+      {/* Hidden canvas for photo capture */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
 };

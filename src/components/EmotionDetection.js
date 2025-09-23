@@ -2,12 +2,67 @@ import React, { useState } from 'react';
 import { Play, Pause, RotateCcw, Upload, Image, X } from 'lucide-react';
 import './EmotionDetection.css';
 
-const EmotionDetection = ({ onEmotionDetected }) => {
+const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }) => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [result, setResult] = useState(null);
   const [lastResponseJson, setLastResponseJson] = useState('');
+
+  // ฟังก์ชันสำหรับกำหนดสีตามอารมณ์
+  const getEmotionColor = (emotion) => {
+    const emotionColors = {
+      // อารมณ์บวก - สีส้ม
+      'happy': '#ff6b35',
+      'surprise': '#ff8c42',
+      
+      // อารมณ์ลบ - สีม่วง
+      'sad': '#8b5cf6',
+      'angry': '#7c3aed',
+      'fear': '#a855f7',
+      'disgust': '#9333ea',
+      
+      // อารมณ์ปกติ - สีฟ้า
+      'neutral': '#3b82f6'
+    };
+    
+    return emotionColors[emotion] || emotionColors['neutral'];
+  };
+
+  // ฟังก์ชันสำหรับกำหนด gradient ตามอารมณ์
+  const getEmotionGradient = (emotion) => {
+    const emotionGradients = {
+      // อารมณ์บวก - สีส้ม
+      'happy': 'linear-gradient(135deg, #ff6b35, #ff8c42, #ffa726)',
+      'surprise': 'linear-gradient(135deg, #ff8c42, #ffb74d, #ffcc80)',
+      
+      // อารมณ์ลบ - สีม่วง
+      'sad': 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
+      'angry': 'linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)',
+      'fear': 'linear-gradient(135deg, #a855f7, #c084fc, #d8b4fe)',
+      'disgust': 'linear-gradient(135deg, #9333ea, #a855f7, #c084fc)',
+      
+      // อารมณ์ปกติ - สีฟ้า
+      'neutral': 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)'
+    };
+    
+    return emotionGradients[emotion] || emotionGradients['neutral'];
+  };
+
+  // ฟังก์ชันสำหรับกำหนด emoji ตามอารมณ์
+  const getEmoji = (emotion) => {
+    const emotionEmojis = {
+      'happy': '😊',
+      'surprise': '😲',
+      'sad': '😢',
+      'angry': '😠',
+      'fear': '😨',
+      'disgust': '🤢',
+      'neutral': '😐'
+    };
+    
+    return emotionEmojis[emotion] || '😐';
+  };
 
   const analyzeFile = async (file) => {
     if (!file) return;
@@ -32,8 +87,10 @@ const EmotionDetection = ({ onEmotionDetected }) => {
       if (!res.ok || data.error) {
         const errMsg = (data && (data.error || data.detail)) ? (data.error || data.detail) : `HTTP ${res.status}`;
         setResult({ emotion: errMsg, emoji: "❌" });
+        if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตเป็น neutral เมื่อเกิดข้อผิดพลาด
       } else {
         setResult({ emotion: data.emotion, emoji: "😊", crop: data.face_crop_image, coords: data.face_coords });
+        if (onEmotionChange) onEmotionChange(data.emotion); // อัปเดตอารมณ์ปัจจุบัน
       }
     } catch (err) {
       console.error(err);
@@ -60,6 +117,7 @@ const EmotionDetection = ({ onEmotionDetected }) => {
     setResult(null);
     setUploadedFile(null);
     setLastResponseJson('');
+    if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตอารมณ์เป็น neutral
   };
 
 
@@ -68,6 +126,12 @@ const EmotionDetection = ({ onEmotionDetected }) => {
       <div className="detection-header">
         <h2>ตรวจจับอารมณ์ของคุณ</h2>
         <p>ให้ AI ช่วยวิเคราะห์อารมณ์จากใบหน้าและน้ำเสียงของคุณ</p>
+        {currentEmotion !== 'neutral' && (
+          <div className="current-emotion-indicator">
+            <span className="emotion-label">อารมณ์ปัจจุบัน:</span>
+            <span className="emotion-value">{getEmoji(currentEmotion)} {currentEmotion}</span>
+          </div>
+        )}
       </div>
 
       {/* โหมดเดียว: กล้อง/อัปโหลดรูป */}

@@ -40,3 +40,6 @@ __pycache__/
 # eslint cache
 node_modules/.cache/
 node_modules/.cache/.eslintcache
+/Backend/__pycache__
+node_modules/.cache/default-development/index.pack.old
+node_modules/.cache/default-development/index.pack

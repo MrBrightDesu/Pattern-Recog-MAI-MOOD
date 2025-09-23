@@ -10,13 +10,16 @@ import cv2
 try:
     from .model_image import model, classes as class_names
     from .utlis import detect_and_crop_face, predict_face_image
+    from .model_audio import predict_audio as predict_audio_emotion
 except Exception:
     try:
         from Backend.model_image import model, classes as class_names
         from Backend.utlis import detect_and_crop_face, predict_face_image
+        from Backend.model_audio import predict_audio as predict_audio_emotion
     except Exception:
         from model_image import model, classes as class_names
         from utlis import detect_and_crop_face, predict_face_image
+        from model_audio import predict_audio as predict_audio_emotion
 
 app = FastAPI(title="Emotion Detection API")
 
@@ -82,4 +85,38 @@ async def predict(file: UploadFile = File(...)):
         }
     except Exception as e:
         print("/predict error:\n" + traceback.format_exc())
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.post("/predict-audio")
+async def predict_audio(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        if not contents:
+            return JSONResponse(content={"error": "Empty file"}, status_code=400)
+
+        # Write to a temp file for torchaudio to load reliably across platforms
+        import tempfile, os
+        import torchaudio
+        suffix = os.path.splitext(file.filename or "")[1] or ".wav"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
+
+        try:
+            waveform, sr = torchaudio.load(tmp_path)
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+        try:
+            emotion = predict_audio_emotion(waveform, sr)
+        except Exception as pred_e:
+            print("audio prediction error:\n" + traceback.format_exc())
+            return JSONResponse(content={"error": f"audio_prediction_failed: {pred_e}"}, status_code=500)
+
+        return {"emotion": emotion}
+    except Exception as e:
+        print("/predict-audio error:\n" + traceback.format_exc())
         return JSONResponse(content={"error": str(e)}, status_code=500)

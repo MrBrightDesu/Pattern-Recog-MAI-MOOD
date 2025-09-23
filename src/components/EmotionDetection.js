@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Upload, Image, X } from 'lucide-react';
 import './EmotionDetection.css';
 
 const EmotionDetection = ({ onEmotionDetected }) => {
@@ -58,7 +58,10 @@ const EmotionDetection = ({ onEmotionDetected }) => {
     setIsDetecting(false);
     setSelectedImage(null);
     setResult(null);
+    setUploadedFile(null);
+    setLastResponseJson('');
   };
+
 
   return (
     <div className="emotion-detection">
@@ -72,48 +75,73 @@ const EmotionDetection = ({ onEmotionDetected }) => {
       <div className="detection-area">
         <div className="camera-preview">
           {selectedImage ? (
-            <img src={selectedImage} alt="preview" className="preview-img" />
+            <div className="image-preview-container">
+              <img src={selectedImage} alt="preview" className="preview-img" />
+              <button 
+                className="remove-image-btn" 
+                onClick={handleStopDetection}
+                title="ลบรูปภาพ"
+              >
+                <X className="remove-icon" />
+              </button>
+            </div>
           ) : (
-            <div className="camera-placeholder">
-              <Camera className="camera-icon" />
-              <p>เลือกรูปเพื่ออัปโหลด</p>
+            <div className="upload-area">
+              <div className="upload-content">
+                <div className="upload-icon-container">
+                  <Image className="upload-icon" />
+                  <Upload className="upload-arrow" />
+                </div>
+                <h3>อัปโหลดรูปภาพ</h3>
+                <p>ลากและวางรูปภาพที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                <div className="file-types">
+                  <span>รองรับ: JPG, PNG, GIF</span>
+                </div>
+              </div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageUpload}
+                className="file-input"
+                id="image-upload"
+              />
+              <label htmlFor="image-upload" className="upload-label">
+                เลือกไฟล์
+              </label>
             </div>
           )}
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={handleImageUpload} 
-          />
         </div>
       </div>
 
-      <div className="detection-controls">
-        {!isDetecting ? (
-          <button className="start-btn" disabled={!uploadedFile} onClick={() => analyzeFile(uploadedFile)}>
-            <Play className="btn-icon" />
-            วิเคราะห์อีกครั้ง
+      {uploadedFile && (
+        <div className="detection-controls">
+          {!isDetecting ? (
+            <button className="start-btn" onClick={() => analyzeFile(uploadedFile)}>
+              <Play className="btn-icon" />
+              วิเคราะห์อารมณ์
+            </button>
+          ) : (
+            <button className="stop-btn" onClick={handleStopDetection}>
+              <Pause className="btn-icon" />
+              หยุดการวิเคราะห์
+            </button>
+          )}
+          
+          <button className="reset-btn" onClick={handleStopDetection}>
+            <RotateCcw className="btn-icon" />
+            เริ่มใหม่
           </button>
-        ) : (
-          <button className="stop-btn" onClick={handleStopDetection}>
-            <Pause className="btn-icon" />
-            หยุดการตรวจจับ
-          </button>
-        )}
-        
-        <button className="reset-btn" onClick={handleStopDetection}>
-          <RotateCcw className="btn-icon" />
-          รีเซ็ต
-        </button>
-      </div>
+        </div>
+      )}
 
       {result && (
         <div className="emotion-result">
           <h3>ผลการวิเคราะห์</h3>
           <p>{result.emoji} {result.emotion}</p>
           {result.crop && (
-            <div style={{ marginTop: 12 }}>
+            <div className="face-crop-container">
               <h4>บริเวณที่ถูกครอป</h4>
-              <img src={result.crop} alt="face-crop" style={{ maxWidth: '100%', borderRadius: 8 }} />
+              <img src={result.crop} alt="face-crop" className="face-crop-image" />
             </div>
           )}
         </div>

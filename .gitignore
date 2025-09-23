@@ -29,3 +29,14 @@ next-env.d.ts
 .venv/
 venv/
 ENV/
+
+# python bytecode & cache
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# eslint cache
+node_modules/.cache/
+node_modules/.cache/.eslintcache

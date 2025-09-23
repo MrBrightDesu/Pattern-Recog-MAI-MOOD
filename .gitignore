@@ -40,3 +40,4 @@ __pycache__/
 # eslint cache
 node_modules/.cache/
 node_modules/.cache/.eslintcache
+node_modules/.cache/.eslintcache

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Upload, Image, X, Camera, CameraOff } from 'lucide-react';
+import { Play, Pause, RotateCcw, Upload, Image, X, Camera, CameraOff, Mic, MicOff, Save, XCircle, Volume2 } from 'lucide-react';
 import './EmotionDetection.css';
 
 const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }) => {
@@ -11,8 +11,14 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [stream, setStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
+  const [predictMode, setPredictMode] = useState('image'); // 'image', 'audio', 'both'
+  const [audioFile, setAudioFile] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const audioInputRef = useRef(null);
 
   // ฟังก์ชันสำหรับกำหนดสีตามอารมณ์
   const getEmotionColor = (emotion) => {
@@ -69,14 +75,29 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     return emotionEmojis[emotion] || '😐';
   };
 
-  const analyzeFile = async (file) => {
-    if (!file) return;
+  const analyzeFile = async (file, audioFile = null) => {
+    if (!file && !audioFile) return;
     setIsDetecting(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
       const apiBase = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
-      const res = await fetch(`${apiBase}/predict`, { method: "POST", body: formData });
+      let endpoint = '/predict';
+      
+      if (predictMode === 'image' && file) {
+        formData.append("file", file);
+        endpoint = '/predict';
+      } else if (predictMode === 'audio' && audioFile) {
+        formData.append("file", audioFile);
+        endpoint = '/predict-audio';
+      } else if (predictMode === 'both' && file && audioFile) {
+        formData.append("image", file);
+        formData.append("audio", audioFile);
+        endpoint = '/predict-both';
+      } else {
+        throw new Error('กรุณาเลือกไฟล์ที่เหมาะสมกับโหมดการวิเคราะห์');
+      }
+
+      const res = await fetch(`${apiBase}${endpoint}`, { method: "POST", body: formData });
 
       const contentType = res.headers.get('content-type') || '';
       let data;
@@ -92,10 +113,18 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       if (!res.ok || data.error) {
         const errMsg = (data && (data.error || data.detail)) ? (data.error || data.detail) : `HTTP ${res.status}`;
         setResult({ emotion: errMsg, emoji: "❌" });
-        if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตเป็น neutral เมื่อเกิดข้อผิดพลาด
+        if (onEmotionChange) onEmotionChange('neutral');
       } else {
-        setResult({ emotion: data.emotion, emoji: "😊", crop: data.face_crop_image, coords: data.face_coords });
-        if (onEmotionChange) onEmotionChange(data.emotion); // อัปเดตอารมณ์ปัจจุบัน
+        setResult({ 
+          emotion: data.emotion, 
+          emoji: getEmoji(data.emotion), 
+          crop: data.face_crop_image, 
+          coords: data.face_coords,
+          imageEmotion: data.image_emotion,
+          audioEmotion: data.audio_emotion,
+          confidence: data.confidence
+        });
+        if (onEmotionChange) onEmotionChange(data.emotion);
       }
     } catch (err) {
       console.error(err);
@@ -113,7 +142,57 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     if (!file) return;
     setUploadedFile(file);
     setSelectedImage(URL.createObjectURL(file));
-    await analyzeFile(file);
+    if (predictMode === 'image' || predictMode === 'both') {
+      await analyzeFile(file, audioFile);
+    }
+  };
+
+  const handleAudioUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAudioFile(file);
+    if (predictMode === 'audio' || predictMode === 'both') {
+      await analyzeFile(uploadedFile, file);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+
+      recorder.ondataavailable = (event) => {
+        chunks.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const file = new File([blob], 'recording.wav', { type: 'audio/wav' });
+        setAudioFile(file);
+        setAudioChunks([]);
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (predictMode === 'audio' || predictMode === 'both') {
+          analyzeFile(uploadedFile, file);
+        }
+      };
+
+      setMediaRecorder(recorder);
+      setAudioChunks(chunks);
+      recorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('ไม่สามารถเข้าถึงไมโครโฟนได้');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
   };
 
   const handleStopDetection = () => {
@@ -121,10 +200,18 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setSelectedImage(null);
     setResult(null);
     setUploadedFile(null);
+    setAudioFile(null);
     setLastResponseJson('');
     stopCamera(); // ปิดกล้องด้วย
     if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตอารมณ์เป็น neutral
   };
+
+  const handleSave = () => {
+    // TODO: บันทึกลง Firebase
+    console.log('Saving result:', result);
+    alert('บันทึกผลการวิเคราะห์เรียบร้อยแล้ว! (จะเชื่อมต่อ Firebase ในอนาคต)');
+  };
+
 
   // ฟังก์ชันสำหรับเปิดกล้อง
   const startCamera = async () => {
@@ -249,126 +336,345 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
         )}
       </div>
 
-      {/* โหมดเดียว: กล้อง/อัปโหลดรูป */}
-
-      <div className="detection-area">
-        <div className="camera-preview">
-          {selectedImage ? (
-            <div className="image-preview-container">
-              <img src={selectedImage} alt="preview" className="preview-img" />
-              <button 
-                className="remove-image-btn" 
-                onClick={handleStopDetection}
-                title="ลบรูปภาพ"
-              >
-                <X className="remove-icon" />
-              </button>
+      {/* เลือกโหมดการวิเคราะห์ */}
+      <div className="predict-mode-selector">
+        <h3>เลือกโหมดการวิเคราะห์</h3>
+        <div className="mode-options">
+          <label className={`mode-option ${predictMode === 'image' ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name="predictMode"
+              value="image"
+              checked={predictMode === 'image'}
+              onChange={(e) => setPredictMode(e.target.value)}
+            />
+            <Image className="mode-icon" />
+            <span>ภาพอย่างเดียว</span>
+          </label>
+          <label className={`mode-option ${predictMode === 'audio' ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name="predictMode"
+              value="audio"
+              checked={predictMode === 'audio'}
+              onChange={(e) => setPredictMode(e.target.value)}
+            />
+            <Volume2 className="mode-icon" />
+            <span>เสียงอย่างเดียว</span>
+          </label>
+          <label className={`mode-option ${predictMode === 'both' ? 'active' : ''}`}>
+            <input
+              type="radio"
+              name="predictMode"
+              value="both"
+              checked={predictMode === 'both'}
+              onChange={(e) => setPredictMode(e.target.value)}
+            />
+            <div className="mode-icons">
+              <Camera className="mode-icon" />
+              <Volume2 className="mode-icon" />
             </div>
-          ) : isCameraOpen ? (
-            <div className="camera-container">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="camera-video"
-                onLoadedMetadata={() => {
-                  console.log('Video loaded metadata');
-                  if (videoRef.current) {
-                    videoRef.current.play().catch(console.error);
-                  }
-                }}
-                onError={(e) => {
-                  console.error('Video error:', e);
-                  setCameraError('เกิดข้อผิดพลาดในการแสดงวิดีโอ');
-                }}
-                onCanPlay={() => {
-                  console.log('Video can play');
-                }}
-                onPlay={() => {
-                  console.log('Video started playing');
-                }}
-              />
-              {cameraError && (
-                <div className="camera-error">
-                  <p>{cameraError}</p>
-                </div>
-              )}
-              <div className="camera-controls">
-                <button
-                  className="capture-btn"
-                  onClick={capturePhoto}
-                  title="ถ่ายรูป"
-                >
-                  <Camera className="btn-icon" />
-                  ถ่ายรูป
-                </button>
-                <button
-                  className="stop-camera-btn"
-                  onClick={stopCamera}
-                  title="ปิดกล้อง"
-                >
-                  <CameraOff className="btn-icon" />
-                  ปิดกล้อง
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="upload-area">
-              <div className="upload-content">
-                <div className="upload-icon-container">
-                  <Image className="upload-icon" />
-                  <Upload className="upload-arrow" />
-                </div>
-                <h3>อัปโหลดรูปภาพ</h3>
-                <p>ลากและวางรูปภาพที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
-                <div className="file-types">
-                  <span>รองรับ: JPG, PNG, GIF</span>
-                </div>
-              </div>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageUpload}
-                className="file-input"
-                id="image-upload"
-              />
-              <label htmlFor="image-upload" className="upload-label">
-                เลือกไฟล์
-              </label>
-            </div>
-          )}
+            <span>ทั้งคู่</span>
+          </label>
         </div>
       </div>
 
-      {!selectedImage && !isCameraOpen && (
-        <div className="camera-toggle">
-          <button
-            className="camera-btn"
-            onClick={startCamera}
-            title="เปิดกล้อง"
-          >
-            <Camera className="btn-icon" />
-            เปิดกล้อง
-          </button>
+      {/* โหมดเดียว: กล้อง/อัปโหลดรูป */}
+
+      {/* ส่วนสำหรับภาพ - แสดงเฉพาะเมื่อไม่ใช่โหมดเสียงอย่างเดียว */}
+      {predictMode !== 'audio' && (
+        <div className="upload-section">
+          <h3>อัปโหลดรูปภาพ</h3>
+          <div className="upload-container">
+          {selectedImage ? (
+              <div className="preview-container">
+            <img src={selectedImage} alt="preview" className="preview-img" />
+                <button 
+                  className="remove-btn" 
+                  onClick={handleStopDetection}
+                  title="ลบรูปภาพ"
+                >
+                  <X className="remove-icon" />
+                </button>
+              </div>
+            ) : isCameraOpen ? (
+              <div className="camera-container">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="camera-video"
+                  onLoadedMetadata={() => {
+                    console.log('Video loaded metadata');
+                    if (videoRef.current) {
+                      videoRef.current.play().catch(console.error);
+                    }
+                  }}
+                  onError={(e) => {
+                    console.error('Video error:', e);
+                    setCameraError('เกิดข้อผิดพลาดในการแสดงวิดีโอ');
+                  }}
+                  onCanPlay={() => {
+                    console.log('Video can play');
+                  }}
+                  onPlay={() => {
+                    console.log('Video started playing');
+                  }}
+                />
+                {cameraError && (
+                  <div className="error-message">
+                    <p>{cameraError}</p>
+            </div>
+          )}
+                <div className="camera-controls">
+                  <button
+                    className="capture-btn"
+                    onClick={capturePhoto}
+                    title="ถ่ายรูป"
+                  >
+                    <Camera className="btn-icon" />
+                    ถ่ายรูป
+                  </button>
+                  <button
+                    className="stop-camera-btn"
+                    onClick={stopCamera}
+                    title="ปิดกล้อง"
+                  >
+                    <CameraOff className="btn-icon" />
+                    ปิดกล้อง
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="upload-area">
+                <div className="upload-content">
+                  <div className="upload-icon-container">
+                    <Image className="upload-icon" />
+                    <Upload className="upload-arrow" />
+                  </div>
+                  <h4>อัปโหลดรูปภาพ</h4>
+                  <p>ลากและวางรูปภาพที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                  <div className="file-types">
+                    <span>รองรับ: JPG, PNG, GIF</span>
+                  </div>
+                </div>
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={handleImageUpload} 
+                  className="file-input"
+                  id="image-upload"
+                />
+                <label htmlFor="image-upload" className="upload-label">
+                  เลือกไฟล์ภาพ
+                </label>
+                
+                {/* คำว่า "หรือเปิดกล้อง" ใต้กรอบอัปโหลด */}
+                <div className="upload-alternative">
+                  <span className="alternative-text">หรือ</span>
+                  <button
+                    className="camera-btn-inline"
+                    onClick={startCamera}
+                    title="เปิดกล้อง"
+                  >
+                    <Camera className="btn-icon" />
+                    เปิดกล้อง
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {uploadedFile && (
-        <div className="detection-controls">
-          {!isDetecting ? (
-            <button className="start-btn" onClick={() => analyzeFile(uploadedFile)}>
-              <Play className="btn-icon" />
+      {/* ส่วนสำหรับเสียง */}
+      {predictMode === 'audio' && (
+        <div className="upload-section">
+          <h3>อัปโหลดไฟล์เสียง</h3>
+          <div className="upload-container">
+            {audioFile ? (
+              <div className="preview-container">
+                <div className="file-preview">
+                  <Volume2 className="file-icon" />
+                  <div className="file-info">
+                    <h4>ไฟล์เสียง</h4>
+                    <p>{audioFile.name}</p>
+                  </div>
+                </div>
+                <button 
+                  className="remove-btn" 
+                  onClick={() => setAudioFile(null)}
+                  title="ลบไฟล์เสียง"
+                >
+                  <X className="remove-icon" />
+                </button>
+              </div>
+            ) : (
+              <div className="upload-area">
+                <div className="upload-content">
+                  <div className="upload-icon-container">
+                    <Volume2 className="upload-icon" />
+                    <Upload className="upload-arrow" />
+                  </div>
+                  <h4>อัปโหลดไฟล์เสียง</h4>
+                  <p>ลากและวางไฟล์เสียงที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                  <div className="file-types">
+                    <span>รองรับ: WAV, MP3, M4A</span>
+                  </div>
+                </div>
+                <input 
+                  type="file" 
+                  accept="audio/*" 
+                  onChange={handleAudioUpload}
+                  className="file-input"
+                  id="audio-upload"
+                />
+                <label htmlFor="audio-upload" className="upload-label">
+                  เลือกไฟล์เสียง
+                </label>
+                
+                {/* คำว่า "หรือบันทึกเสียงใหม่" ใต้กรอบอัปโหลด */}
+                <div className="upload-alternative">
+                  <span className="alternative-text">หรือ</span>
+                  <div className="recording-buttons">
+                    {!isRecording ? (
+                      <button
+                        className="record-btn-inline"
+                        onClick={startRecording}
+                        title="เริ่มบันทึกเสียง"
+                      >
+                        <Mic className="btn-icon" />
+                        บันทึกเสียงใหม่
+                      </button>
+                    ) : (
+                      <button
+                        className="stop-record-btn-inline"
+                        onClick={stopRecording}
+                        title="หยุดบันทึกเสียง"
+                      >
+                        <MicOff className="btn-icon" />
+                        หยุดบันทึก
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {isRecording && (
+                  <div className="recording-indicator">
+                    <div className="recording-dot"></div>
+                    <span>กำลังบันทึกเสียง...</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ส่วนสำหรับเสียงในโหมดทั้งคู่ */}
+      {predictMode === 'both' && (
+        <div className="upload-section">
+          <h3>เพิ่มไฟล์เสียง</h3>
+          <div className="upload-container">
+            {audioFile ? (
+              <div className="preview-container">
+                <div className="file-preview">
+                  <Volume2 className="file-icon" />
+                  <div className="file-info">
+                    <h4>ไฟล์เสียง</h4>
+                    <p>{audioFile.name}</p>
+                  </div>
+                </div>
+                <button 
+                  className="remove-btn" 
+                  onClick={() => setAudioFile(null)}
+                  title="ลบไฟล์เสียง"
+                >
+                  <X className="remove-icon" />
+                </button>
+              </div>
+            ) : (
+              <div className="upload-area">
+                <div className="upload-content">
+                  <div className="upload-icon-container">
+                    <Volume2 className="upload-icon" />
+                    <Upload className="upload-arrow" />
+                  </div>
+                  <h4>อัปโหลดไฟล์เสียง</h4>
+                  <p>ลากและวางไฟล์เสียงที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                  <div className="file-types">
+                    <span>รองรับ: WAV, MP3, M4A</span>
+                  </div>
+                </div>
+                <input 
+                  type="file" 
+                  accept="audio/*" 
+                  onChange={handleAudioUpload}
+                  className="file-input"
+                  id="audio-upload-both"
+                />
+                <label htmlFor="audio-upload-both" className="upload-label">
+                  เลือกไฟล์เสียง
+                </label>
+                
+                {/* คำว่า "หรือบันทึกเสียงใหม่" ใต้กรอบอัปโหลด */}
+                <div className="upload-alternative">
+                  <span className="alternative-text">หรือ</span>
+                  <div className="recording-buttons">
+                    {!isRecording ? (
+                      <button
+                        className="record-btn-inline"
+                        onClick={startRecording}
+                        title="เริ่มบันทึกเสียง"
+                      >
+                        <Mic className="btn-icon" />
+                        บันทึกเสียงใหม่
+                      </button>
+                    ) : (
+                      <button
+                        className="stop-record-btn-inline"
+                        onClick={stopRecording}
+                        title="หยุดบันทึกเสียง"
+                      >
+                        <MicOff className="btn-icon" />
+                        หยุดบันทึก
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {isRecording && (
+                  <div className="recording-indicator">
+                    <div className="recording-dot"></div>
+                    <span>กำลังบันทึกเสียง...</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
+      {/* Detection Controls - แสดงเมื่อมีไฟล์ที่เหมาะสมกับโหมด */}
+      {((predictMode === 'image' && uploadedFile) || 
+        (predictMode === 'audio' && audioFile) || 
+        (predictMode === 'both' && uploadedFile && audioFile)) && (
+      <div className="detection-controls">
+        {!isDetecting ? (
+            <button className="start-btn" onClick={() => analyzeFile(uploadedFile, audioFile)}>
+            <Play className="btn-icon" />
               วิเคราะห์อารมณ์
-            </button>
-          ) : (
-            <button className="stop-btn" onClick={handleStopDetection}>
-              <Pause className="btn-icon" />
+          </button>
+        ) : (
+          <button className="stop-btn" onClick={handleStopDetection}>
+            <Pause className="btn-icon" />
               หยุดการวิเคราะห์
             </button>
           )}
           
-          {selectedImage && (
+          {selectedImage && predictMode !== 'audio' && (
             <button 
               className="retake-btn" 
               onClick={async () => {
@@ -395,28 +701,71 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
             >
               <Camera className="btn-icon" />
               ถ่ายซ้ำ
-            </button>
-          )}
-          
-          <button className="reset-btn" onClick={handleStopDetection}>
-            <RotateCcw className="btn-icon" />
-            เริ่มใหม่
           </button>
-        </div>
+        )}
+        
+        <button className="reset-btn" onClick={handleStopDetection}>
+          <RotateCcw className="btn-icon" />
+            เริ่มใหม่
+        </button>
+      </div>
       )}
 
       {result && (
         <div className="emotion-result">
           <h3>ผลการวิเคราะห์</h3>
-          <p>{result.emoji} {result.emotion}</p>
+          
+          {predictMode === 'both' && result.imageEmotion && result.audioEmotion ? (
+            <div className="combined-results">
+              <div className="main-result">
+                <h4>ผลรวม</h4>
+                <p className="main-emotion">{result.emoji} {result.emotion}</p>
+                {result.confidence && (
+                  <p className="confidence">ความมั่นใจ: {(result.confidence * 100).toFixed(1)}%</p>
+                )}
+              </div>
+              
+              <div className="individual-results">
+                <div className="result-item">
+                  <h5>จากภาพ</h5>
+                  <p>{getEmoji(result.imageEmotion)} {result.imageEmotion}</p>
+                </div>
+                <div className="result-item">
+                  <h5>จากเสียง</h5>
+                  <p>{getEmoji(result.audioEmotion)} {result.audioEmotion}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="single-result">
+              <p className="main-emotion">{result.emoji} {result.emotion}</p>
+              {result.confidence && (
+                <p className="confidence">ความมั่นใจ: {(result.confidence * 100).toFixed(1)}%</p>
+              )}
+            </div>
+          )}
+          
           {result.crop && (
             <div className="face-crop-container">
               <h4>บริเวณที่ถูกครอป</h4>
               <img src={result.crop} alt="face-crop" className="face-crop-image" />
             </div>
           )}
+          
+          {/* ปุ่มบันทึก/ยกเลิก */}
+          <div className="result-actions">
+            <button className="save-btn" onClick={handleSave}>
+              <Save className="btn-icon" />
+              บันทึกผลการวิเคราะห์
+            </button>
+            <button className="cancel-btn" onClick={handleStopDetection}>
+              <XCircle className="btn-icon" />
+              เริ่มใหม่
+            </button>
+          </div>
         </div>
       )}
+
 
       {lastResponseJson && (
         <div className="emotion-result" style={{ marginTop: 16 }}>

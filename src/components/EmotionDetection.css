@@ -151,7 +151,9 @@
   background: rgba(255, 255, 255, 0.05);
   border: 2px dashed rgba(255, 255, 255, 0.3);
   border-radius: 1.5rem;
-  height: 350px;
+  height: 400px;
+  width: 100%;
+  max-width: 500px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -161,6 +163,7 @@
   transition: all 0.3s ease;
   cursor: pointer;
   overflow: hidden;
+  padding: 2rem;
 }
 
 .upload-area:hover {
@@ -760,6 +763,89 @@
   margin-bottom: 1.5rem;
 }
 
+.camera-toggle-below {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Upload Alternative - "หรือ" กับปุ่ม */
+.upload-alternative {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alternative-text {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.camera-btn-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+.camera-btn-inline:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.record-btn-inline, .stop-record-btn-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.record-btn-inline {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.record-btn-inline:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.stop-record-btn-inline {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.stop-record-btn-inline:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
 .camera-btn {
   display: flex;
   align-items: center;
@@ -1041,5 +1127,605 @@
   .start-btn, .stop-btn, .reset-btn, .retake-btn {
     padding: 0.625rem 0.875rem;
     font-size: 0.85rem;
+  }
+}
+
+/* Predict Mode Selector */
+.predict-mode-selector {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.predict-mode-selector h3 {
+  color: #e2e8f0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.mode-options {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.mode-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid transparent;
+  border-radius: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+  min-height: 120px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.mode-option:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.mode-option.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.mode-option::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 1.25rem;
+}
+
+.mode-option.active::before {
+  opacity: 1;
+}
+
+.mode-option input[type="radio"] {
+  display: none;
+}
+
+.mode-option .mode-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: #374151;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.mode-option.active .mode-icon {
+  color: white;
+  transform: scale(1.1);
+}
+
+.mode-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.mode-icons .mode-icon {
+  width: 2rem;
+  height: 2rem;
+  color: #374151;
+}
+
+.mode-option.active .mode-icons .mode-icon {
+  color: white;
+}
+
+.mode-option span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.mode-option.active span {
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Upload Section - ใช้ร่วมกันทั้งภาพและเสียง */
+.upload-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-section h3 {
+  color: #e2e8f0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.upload-container {
+  position: relative;
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Preview Container - ใช้ร่วมกันทั้งภาพและเสียง */
+.preview-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 2rem;
+  text-align: center;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+.preview-img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.file-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #667eea;
+}
+
+.file-info h4 {
+  color: #e2e8f0;
+  margin: 0 0 0.25rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.file-info p {
+  color: #94a3b8;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+}
+
+.remove-btn:hover {
+  background: rgba(220, 38, 38, 0.9);
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.remove-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Error Message */
+.error-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  text-align: center;
+  z-index: 10;
+}
+
+.error-message p {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Responsive Design for Upload Sections */
+@media (max-width: 768px) {
+  .upload-section {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .upload-container {
+    min-height: 200px;
+    padding: 0.75rem;
+  }
+  
+  .upload-area {
+    height: 350px;
+    padding: 1.5rem;
+  }
+  
+  .preview-container {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+  
+  .file-preview {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .file-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-section {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .upload-section h3 {
+    font-size: 1.125rem;
+  }
+  
+  .upload-container {
+    min-height: 180px;
+    padding: 0.5rem;
+  }
+  
+  .upload-area {
+    height: 300px;
+    padding: 1rem;
+  }
+  
+  .preview-container {
+    padding: 1rem;
+    max-width: 100%;
+  }
+  
+  .file-preview {
+    padding: 0.75rem;
+  }
+}
+
+.recording-controls {
+  text-align: center;
+}
+
+.recording-controls h4 {
+  color: #e2e8f0;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.recording-buttons {
+  margin-bottom: 1rem;
+}
+
+.record-btn, .stop-record-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.record-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.record-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.stop-record-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.stop-record-btn:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.recording-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.audio-file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 0.75rem;
+  color: #10b981;
+  font-size: 0.9rem;
+}
+
+.audio-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.remove-audio-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: background 0.2s ease;
+}
+
+.remove-audio-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.remove-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Combined Results */
+.combined-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.main-result {
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 1rem;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.main-result h4 {
+  color: #e2e8f0;
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+}
+
+.main-emotion {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #667eea;
+  margin: 0.5rem 0;
+}
+
+.confidence {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0 0;
+}
+
+.individual-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.result-item {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.result-item h5 {
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.result-item p {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.single-result {
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 1rem;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+/* Result Actions */
+.result-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.result-actions .save-btn, .result-actions .cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.result-actions .save-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.result-actions .save-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.result-actions .cancel-btn {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+  box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+}
+
+.result-actions .cancel-btn:hover {
+  background: linear-gradient(135deg, #4b5563, #374151);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(107, 114, 128, 0.4);
+}
+
+/* Responsive adjustments for new components */
+@media (max-width: 768px) {
+  .mode-options {
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  
+  .mode-option {
+    min-width: 100px;
+    min-height: 100px;
+    padding: 1rem 0.75rem;
+  }
+  
+  .mode-option .mode-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .mode-icons .mode-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .mode-option span {
+    font-size: 0.85rem;
+  }
+  
+  .individual-results {
+    grid-template-columns: 1fr;
+  }
+  
+  .result-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .result-actions .save-btn, .result-actions .cancel-btn {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .predict-mode-selector,
+  .audio-upload-section {
+    padding: 1rem;
+  }
+  
+  .audio-upload-area {
+    padding: 1.5rem;
+  }
+  
+  .save-dialog {
+    padding: 1.5rem;
+    margin: 1rem;
   }
 }

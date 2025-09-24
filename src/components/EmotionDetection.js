@@ -98,7 +98,6 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       }
 
       const res = await fetch(`${apiBase}${endpoint}`, { method: "POST", body: formData });
-
       const contentType = res.headers.get('content-type') || '';
       let data;
       if (contentType.includes('application/json')) {
@@ -161,23 +160,19 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       const chunks = [];
-
       recorder.ondataavailable = (event) => {
         chunks.push(event.data);
       };
-
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/wav' });
         const file = new File([blob], 'recording.wav', { type: 'audio/wav' });
         setAudioFile(file);
         setAudioChunks([]);
         stream.getTracks().forEach(track => track.stop());
-        
         if (predictMode === 'audio' || predictMode === 'both') {
           analyzeFile(uploadedFile, file);
         }
       };
-
       setMediaRecorder(recorder);
       setAudioChunks(chunks);
       recorder.start();
@@ -202,8 +197,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setUploadedFile(null);
     setAudioFile(null);
     setLastResponseJson('');
-    stopCamera(); // ปิดกล้องด้วย
-    if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตอารมณ์เป็น neutral
+    stopCamera();
+    if (onEmotionChange) onEmotionChange('neutral');
   };
 
   const handleSave = () => {

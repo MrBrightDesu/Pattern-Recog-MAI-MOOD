@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Upload, Image, X, Camera, CameraOff, Mic, MicOff, Save, XCircle, Volume2 } from 'lucide-react';
+import { db } from '../firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
 import './EmotionDetection.css';
 
 const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }) => {
@@ -16,9 +19,12 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const audioInputRef = useRef(null);
+  const { currentUser } = useAuth();
 
   // ฟังก์ชันสำหรับกำหนดสีตามอารมณ์
   const getEmotionColor = (emotion) => {
@@ -206,10 +212,63 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตอารมณ์เป็น neutral
   };
 
-  const handleSave = () => {
-    // TODO: บันทึกลง Firebase
-    console.log('Saving result:', result);
-    alert('บันทึกผลการวิเคราะห์เรียบร้อยแล้ว! (จะเชื่อมต่อ Firebase ในอนาคต)');
+  const handleSave = async () => {
+    if (!result || !currentUser) {
+      console.error('No result or user to save');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setSaveStatus({ type: 'info', message: 'กำลังบันทึกข้อมูล...' });
+
+      // เตรียมข้อมูลที่จะบันทึก
+      const saveData = {
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        userName: currentUser.displayName || 'ผู้ใช้',
+        timestamp: serverTimestamp(),
+        predictMode: predictMode,
+        emotion: result.emotion,
+        confidence: result.confidence || 0,
+        imageEmotion: result.imageEmotion || null,
+        audioEmotion: result.audioEmotion || null,
+        faceCoords: result.coords || null,
+        hasImage: !!uploadedFile,
+        hasAudio: !!audioFile,
+        createdAt: new Date().toISOString(),
+        // ข้อมูลเพิ่มเติม
+        deviceInfo: {
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          platform: navigator.platform
+        }
+      };
+
+      // บันทึกข้อมูลเข้า Firestore
+      const docRef = await addDoc(collection(db, 'emotionAnalysis'), saveData);
+      
+      console.log('Document written with ID: ', docRef.id);
+      
+      setSaveStatus({ 
+        type: 'success', 
+        message: 'บันทึกข้อมูลสำเร็จ!' 
+      });
+
+      // รีเซ็ตสถานะหลังจาก 3 วินาที
+      setTimeout(() => {
+        setSaveStatus(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error saving to Firestore: ', error);
+      setSaveStatus({ 
+        type: 'error', 
+        message: `เกิดข้อผิดพลาด: ${error.message}` 
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
 
@@ -754,15 +813,30 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
           
           {/* ปุ่มบันทึก/ยกเลิก */}
           <div className="result-actions">
-            <button className="save-btn" onClick={handleSave}>
-              <Save className="btn-icon" />
-              บันทึกผลการวิเคราะห์
+            <button 
+              className={`save-btn ${isSaving ? 'saving' : ''}`}
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <div className="loading-spinner"></div>
+              ) : (
+                <Save className="btn-icon" />
+              )}
+              {isSaving ? 'กำลังบันทึก...' : 'บันทึกผลการวิเคราะห์'}
             </button>
             <button className="cancel-btn" onClick={handleStopDetection}>
               <XCircle className="btn-icon" />
               เริ่มใหม่
             </button>
           </div>
+          
+          {/* แสดงสถานะการบันทึก */}
+          {saveStatus && (
+            <div className={`save-status ${saveStatus.type}`}>
+              {saveStatus.type === 'success' ? '✅' : saveStatus.type === 'error' ? '❌' : '⏳'} {saveStatus.message}
+            </div>
+          )}
         </div>
       )}
 

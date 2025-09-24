@@ -8,7 +8,6 @@ import cv2
 import os
 import tempfile
 from typing import Optional
-import librosa
 # Support running as a package (Backend.main) or from inside Backend directory
 try:
     from .model_image import model, classes as class_names
@@ -105,25 +104,8 @@ def _save_temp_file(contents: bytes, filename: Optional[str]) -> str:
         tmp.close()
         
 # =========================
-# Audio model inference
+# Audio model inference (handled by model_audio.MFCC)
 # =========================
-def run_audio_model(y, sr):
-    """
-    Run the audio emotion prediction model with mel-spectrogram.
-    """
-    # ✅ Mel-spectrogram
-    mel_spec = librosa.feature.melspectrogram(
-        y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=128
-    )
-    mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
-
-    # Reshape → (1, n_mels, time, 1)
-    spectrogram = mel_spec_db[np.newaxis, ..., np.newaxis]
-
-    # TODO: เรียกโมเดลจริง (ตอนนี้ใช้ dummy)
-    prediction = float(np.mean(spectrogram))
-
-    return prediction
 
 # =========================
 # FastAPI endpoints
@@ -185,8 +167,9 @@ async def predict_both(image: UploadFile = File(None), audio: UploadFile = File(
         audio_bytes = await audio.read()
         tmp_path = _save_temp_file(audio_bytes, audio.filename)
         try:
-            y, sr = librosa.load(tmp_path, sr=22050)
-            audio_emotion = run_audio_model(y, sr)
+            import torchaudio
+            waveform, sr = torchaudio.load(tmp_path)
+            audio_emotion = predict_audio_emotion(waveform, sr)
         finally:
             try:
                 os.remove(tmp_path)

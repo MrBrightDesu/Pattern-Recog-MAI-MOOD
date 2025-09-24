@@ -69,9 +69,66 @@
   }
 }
 
+/* Smartphone Responsive Design */
+@media (max-width: 768px) {
+  .App {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+  
+  .main-content {
+    padding: 1rem;
+    min-height: calc(100vh - 60px);
+    min-height: calc(100dvh - 60px);
+  }
+}
+
 @media (max-width: 480px) {
+  .App {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
   .main-content {
     padding: 0.75rem;
     min-height: calc(100vh - 50px);
+    min-height: calc(100dvh - 50px);
+  }
+}
+
+/* iPhone specific adjustments */
+@media (max-width: 414px) {
+  .main-content {
+    padding: 0.5rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .main-content {
+    padding: 0.25rem;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  button, .nav-item, .upload-label {
+    min-height: 44px; /* iOS recommended touch target size */
+    min-width: 44px;
+  }
+  
+  input[type="file"] {
+    min-height: 44px;
+  }
+}
+
+/* Prevent zoom on input focus */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
   }
 }

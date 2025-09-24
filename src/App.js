@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Header from './components/Header';
 import EmotionDetection from './components/EmotionDetection';
 import ActivityRecommendation from './components/ActivityRecommendation';
 import CommunityBoard from './components/CommunityBoard';
 import Profile from './components/Profile';
+import Login from './components/Login';
+import Register from './components/Register';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
-function App() {
+// Main App Content Component
+function AppContent() {
   const [currentView, setCurrentView] = useState('detection');
   const [detectedEmotion, setDetectedEmotion] = useState('neutral');
   const [userProfile, setUserProfile] = useState({
@@ -14,6 +19,16 @@ function App() {
     moodHistory: [],
     completedActivities: []
   });
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const { currentUser } = useAuth();
+
+  // Reset to detection page when user logs in
+  React.useEffect(() => {
+    if (currentUser) {
+      setCurrentView('detection');
+      setDetectedEmotion('neutral');
+    }
+  }, [currentUser]);
 
   const handleEmotionDetected = (emotion) => {
     setDetectedEmotion(emotion);
@@ -88,6 +103,20 @@ function App() {
     }));
   };
 
+  // If user is not authenticated, show login/register
+  if (!currentUser) {
+    return (
+      <div className="App">
+        {authMode === 'login' ? (
+          <Login onToggleMode={() => setAuthMode('register')} />
+        ) : (
+          <Register onToggleMode={() => setAuthMode('login')} />
+        )}
+      </div>
+    );
+  }
+
+  // If user is authenticated, show the main app
   return (
     <div 
       className="App"
@@ -96,34 +125,45 @@ function App() {
         minHeight: '100vh'
       }}
     >
-      <Header currentView={currentView} onViewChange={setCurrentView} />
-      
-      <main className="main-content">
-        {currentView === 'detection' && (
-          <EmotionDetection 
-            onEmotionDetected={handleEmotionDetected}
-            currentEmotion={detectedEmotion}
-            onEmotionChange={handleEmotionChange}
-          />
-        )}
+      <ProtectedRoute>
+        <Header currentView={currentView} onViewChange={setCurrentView} />
         
-        {currentView === 'recommendations' && (
-          <ActivityRecommendation 
-            emotion={detectedEmotion}
-            onActivityCompleted={handleActivityCompleted}
-            onBackToDetection={() => setCurrentView('detection')}
-          />
-        )}
-        
-        {currentView === 'community' && (
-          <CommunityBoard />
-        )}
-        
-        {currentView === 'profile' && (
-          <Profile userProfile={userProfile} />
-        )}
-      </main>
+        <main className="main-content">
+          {currentView === 'detection' && (
+            <EmotionDetection 
+              onEmotionDetected={handleEmotionDetected}
+              currentEmotion={detectedEmotion}
+              onEmotionChange={handleEmotionChange}
+            />
+          )}
+          
+          {currentView === 'recommendations' && (
+            <ActivityRecommendation 
+              emotion={detectedEmotion}
+              onActivityCompleted={handleActivityCompleted}
+              onBackToDetection={() => setCurrentView('detection')}
+            />
+          )}
+          
+          {currentView === 'community' && (
+            <CommunityBoard />
+          )}
+          
+          {currentView === 'profile' && (
+            <Profile userProfile={userProfile} />
+          )}
+        </main>
+      </ProtectedRoute>
     </div>
+  );
+}
+
+// Main App Component with AuthProvider
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

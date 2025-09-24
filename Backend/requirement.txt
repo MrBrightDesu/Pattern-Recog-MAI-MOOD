@@ -5,3 +5,6 @@ torchvision
 mtcnn
 opencv-python
 pillow
+torchaudio
+pydub
+imageio-ffmpeg

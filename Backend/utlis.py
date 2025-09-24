@@ -7,7 +7,14 @@ import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-mtcnn_detector = MTCNN()
+# Lazy init for MTCNN to reduce import-time overhead
+mtcnn_detector = None
+
+def _get_mtcnn():
+    global mtcnn_detector
+    if mtcnn_detector is None:
+        mtcnn_detector = MTCNN()
+    return mtcnn_detector
 
 def detect_with_haar_cascade(img, target_size=(224, 224)):
     """
@@ -48,13 +55,14 @@ def detect_with_haar_cascade(img, target_size=(224, 224)):
 
     return face_rgb, (int(x), int(y), int(w), int(h))
 
-def detect_and_crop_face(img, target_size=(224, 224), use_anime_detection=True):
+def detect_and_crop_face(img, target_size=(224, 224), use_anime_detection=False):
 
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     if use_anime_detection:
         try:
-            faces = mtcnn_detector.detect_faces(img_rgb)
+            detector = _get_mtcnn()
+            faces = detector.detect_faces(img_rgb)
             if len(faces) == 0:
                 print("⚠️ ไม่พบหน้าในภาพ (MTCNN)")
                 return detect_with_haar_cascade(img, target_size)
@@ -102,13 +110,14 @@ def detect_and_crop_face(img, target_size=(224, 224), use_anime_detection=True):
     face_resized = cv2.resize(face_crop, target_size)
     return face_resized, (int(x), int(y), int(w), int(h))
 
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.Grayscale(num_output_channels=3),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406],
-                         [0.229, 0.224, 0.225])
-])
+# Reuse a single transform definition from model_image to avoid divergence
+try:
+    from .model_image import transform as image_transform
+except Exception:
+    try:
+        from Backend.model_image import transform as image_transform
+    except Exception:
+        from model_image import transform as image_transform
 
 # Convenience wrappers for reuse elsewhere
 def crop_face(img, target_size=(224, 224), use_anime_detection=True):
@@ -144,13 +153,13 @@ def preprocess_face_for_model(face_image, model):
     คืนค่า torch.Tensor บนอุปกรณ์เดียวกับโมเดล
     """
     face_pil = Image.fromarray(face_image)
-    img_t = transform(face_pil).unsqueeze(0)
+    img_t = image_transform(face_pil).unsqueeze(0)
     model_device = next(model.parameters()).device
     return img_t.to(model_device)
 
 def predict_face_image(face_image, model, class_names):
     face_pil = Image.fromarray(face_image)
-    img_t = transform(face_pil).unsqueeze(0)
+    img_t = image_transform(face_pil).unsqueeze(0)
     # Send to the same device as the model to avoid CPU/CUDA mismatch
     model_device = next(model.parameters()).device
     img_t = img_t.to(model_device)
@@ -176,7 +185,7 @@ def predict_image_from_path(image_path, model, class_names):
     ใช้ device เดียวกับโมเดล
     """
     image = Image.open(image_path).convert('RGB')
-    img_t = transform(image).unsqueeze(0)
+    img_t = image_transform(image).unsqueeze(0)
     model_device = next(model.parameters()).device
     img_t = img_t.to(model_device)
     with torch.no_grad():

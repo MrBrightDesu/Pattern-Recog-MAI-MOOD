@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Upload, Image, X, Save, Database } from 'lucide-react';
+import { Play, Pause, RotateCcw, Upload, Image, X, Save } from 'lucide-react';
 import './EmotionDetection.css';
-// import { db } from '../firebase/firebaseConfig';
-// import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }) => {
+const FirebaseEmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }) => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -16,41 +16,16 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   // ฟังก์ชันสำหรับกำหนดสีตามอารมณ์
   const getEmotionColor = (emotion) => {
     const emotionColors = {
-      // อารมณ์บวก - สีส้ม
       'happy': '#ff6b35',
       'surprise': '#ff8c42',
-      
-      // อารมณ์ลบ - สีม่วง
       'sad': '#8b5cf6',
       'angry': '#7c3aed',
       'fear': '#a855f7',
       'disgust': '#9333ea',
-      
-      // อารมณ์ปกติ - สีฟ้า
       'neutral': '#3b82f6'
     };
     
     return emotionColors[emotion] || emotionColors['neutral'];
-  };
-
-  // ฟังก์ชันสำหรับกำหนด gradient ตามอารมณ์
-  const getEmotionGradient = (emotion) => {
-    const emotionGradients = {
-      // อารมณ์บวก - สีส้ม
-      'happy': 'linear-gradient(135deg, #ff6b35, #ff8c42, #ffa726)',
-      'surprise': 'linear-gradient(135deg, #ff8c42, #ffb74d, #ffcc80)',
-      
-      // อารมณ์ลบ - สีม่วง
-      'sad': 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
-      'angry': 'linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)',
-      'fear': 'linear-gradient(135deg, #a855f7, #c084fc, #d8b4fe)',
-      'disgust': 'linear-gradient(135deg, #9333ea, #a855f7, #c084fc)',
-      
-      // อารมณ์ปกติ - สีฟ้า
-      'neutral': 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)'
-    };
-    
-    return emotionGradients[emotion] || emotionGradients['neutral'];
   };
 
   // ฟังก์ชันสำหรับกำหนด emoji ตามอารมณ์
@@ -91,10 +66,10 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       if (!res.ok || data.error) {
         const errMsg = (data && (data.error || data.detail)) ? (data.error || data.detail) : `HTTP ${res.status}`;
         setResult({ emotion: errMsg, emoji: "❌" });
-        if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตเป็น neutral เมื่อเกิดข้อผิดพลาด
+        if (onEmotionChange) onEmotionChange('neutral');
       } else {
         setResult({ emotion: data.emotion, emoji: "😊", crop: data.face_crop_image, coords: data.face_coords });
-        if (onEmotionChange) onEmotionChange(data.emotion); // อัปเดตอารมณ์ปัจจุบัน
+        if (onEmotionChange) onEmotionChange(data.emotion);
       }
     } catch (err) {
       console.error(err);
@@ -122,10 +97,10 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setUploadedFile(null);
     setLastResponseJson('');
     setSaveStatus(null);
-    if (onEmotionChange) onEmotionChange('neutral'); // รีเซ็ตอารมณ์เป็น neutral
+    if (onEmotionChange) onEmotionChange('neutral');
   };
 
-  // ฟังก์ชันบันทึกข้อมูล (Local Storage + JSON Download)
+  // ฟังก์ชันบันทึกข้อมูลไป Firebase (ใช้ Firestore)
   const handleSaveToFirebase = async () => {
     if (!result || !uploadedFile) {
       setSaveStatus({ type: 'error', message: 'ไม่มีข้อมูลที่จะบันทึก' });
@@ -136,7 +111,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setSaveStatus(null);
 
     try {
-      // แปลงไฟล์เป็น base64
+      // แปลงไฟล์เป็น base64 สำหรับเก็บใน Firestore
       let originalImageBase64 = null;
       try {
         const reader = new FileReader();
@@ -145,20 +120,22 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
           reader.onerror = reject;
           reader.readAsDataURL(uploadedFile);
         });
+        console.log('✅ Original image converted to base64');
       } catch (error) {
-        console.warn('Failed to convert original image to base64:', error);
+        console.warn('❌ Failed to convert original image to base64:', error);
+        setSaveStatus({ type: 'error', message: 'แปลงรูปภาพไม่สำเร็จ' });
+        return;
       }
 
-      // สร้างข้อมูลที่จะบันทึก
+      // บันทึกข้อมูลไป Firestore
       const emotionData = {
-        id: `emotion_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         emotion: result.emotion,
         faceCoords: result.coords || null,
-        timestamp: new Date().toISOString(),
+        timestamp: serverTimestamp(),
         fileName: uploadedFile.name,
         fileSize: uploadedFile.size,
         fileType: uploadedFile.type,
-        // เก็บรูปเป็น base64
+        // เก็บรูปเป็น base64 ใน Firestore
         originalImageBase64: originalImageBase64,
         cropImageBase64: result.crop || null,
         // ข้อมูลเพิ่มเติม
@@ -169,31 +146,18 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
           platform: navigator.platform,
           language: navigator.language,
           cookieEnabled: navigator.cookieEnabled
-        }
+        },
+        // ระบุว่าใช้ Firestore แทน Storage
+        storageMethod: 'firestore-base64',
+        hasImages: !!(originalImageBase64 || result.crop)
       };
 
-      // บันทึกใน Local Storage
-      const savedData = JSON.parse(localStorage.getItem('emotionAnalysis') || '[]');
-      savedData.push(emotionData);
-      localStorage.setItem('emotionAnalysis', JSON.stringify(savedData));
-
-      // สร้างไฟล์ JSON สำหรับดาวน์โหลด
-      const jsonData = JSON.stringify(emotionData, null, 2);
-      const blob = new Blob([jsonData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
+      console.log('💾 Saving to Firestore:', emotionData);
+      const docRef = await addDoc(collection(db, 'emotionAnalysis'), emotionData);
       
-      // สร้างลิงก์ดาวน์โหลด
-      const downloadLink = document.createElement('a');
-      downloadLink.href = url;
-      downloadLink.download = `emotion-analysis-${emotionData.id}.json`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      URL.revokeObjectURL(url);
-
       setSaveStatus({ 
         type: 'success', 
-        message: `บันทึกสำเร็จ! ID: ${emotionData.id} (ดาวน์โหลดไฟล์ JSON แล้ว)` 
+        message: `🎉 บันทึกสำเร็จ! ID: ${docRef.id}` 
       });
 
       // รีเซ็ตสถานะหลังจาก 5 วินาที
@@ -202,48 +166,33 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       }, 5000);
 
     } catch (error) {
-      console.error('Error saving data:', error);
+      console.error('❌ Error saving to Firebase:', error);
+      
+      let errorMessage = 'บันทึกไม่สำเร็จ';
+      if (error.message.includes('permission')) {
+        errorMessage = '❌ ไม่มีสิทธิ์ในการบันทึก - ตรวจสอบ Firebase Rules';
+      } else if (error.message.includes('network')) {
+        errorMessage = '🌐 ปัญหาเครือข่าย - ลองใหม่อีกครั้ง';
+      } else if (error.message.includes('quota')) {
+        errorMessage = '📊 เกินโควต้า Firestore - ลองใหม่อีกครั้ง';
+      } else {
+        errorMessage = `❌ บันทึกไม่สำเร็จ: ${error.message}`;
+      }
       
       setSaveStatus({ 
         type: 'error', 
-        message: `บันทึกไม่สำเร็จ: ${error.message}` 
+        message: errorMessage
       });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // ฟังก์ชันดูข้อมูลที่บันทึกไว้
-  const handleViewSavedData = () => {
-    const savedData = JSON.parse(localStorage.getItem('emotionAnalysis') || '[]');
-    if (savedData.length === 0) {
-      setSaveStatus({ 
-        type: 'error', 
-        message: 'ไม่มีข้อมูลที่บันทึกไว้' 
-      });
-      return;
-    }
-
-    // แสดงข้อมูลใน console และ alert
-    console.log('Saved emotion analysis data:', savedData);
-    alert(`มีข้อมูลที่บันทึกไว้ ${savedData.length} รายการ\nดูรายละเอียดใน Console (F12)`);
-    
-    setSaveStatus({ 
-      type: 'success', 
-      message: `พบข้อมูล ${savedData.length} รายการ (ดูใน Console)` 
-    });
-
-    setTimeout(() => {
-      setSaveStatus(null);
-    }, 3000);
-  };
-
-
   return (
     <div className="emotion-detection">
       <div className="detection-header">
-        <h2>ตรวจจับอารมณ์ของคุณ</h2>
-        <p>ให้ AI ช่วยวิเคราะห์อารมณ์จากใบหน้าและน้ำเสียงของคุณ</p>
+        <h2>🔥 Firebase Emotion Detection</h2>
+        <p>ระบบตรวจจับอารมณ์พร้อมบันทึกข้อมูลไป Firebase Firestore</p>
         {currentEmotion !== 'neutral' && (
           <div className="current-emotion-indicator">
             <span className="emotion-label">อารมณ์ปัจจุบัน:</span>
@@ -251,8 +200,6 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
           </div>
         )}
       </div>
-
-      {/* โหมดเดียว: กล้อง/อัปโหลดรูป */}
 
       <div className="detection-area">
         <div className="camera-preview">
@@ -327,30 +274,20 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
             </div>
           )}
           
-          {/* ปุ่มบันทึกและสถานะ */}
+          {/* ปุ่มบันทึกไป Firebase */}
           <div className="save-section">
-            <div className="save-buttons">
-              <button 
-                className={`save-btn ${isSaving ? 'saving' : ''}`}
-                onClick={handleSaveToFirebase}
-                disabled={isSaving}
-              >
-                <Save className="btn-icon" />
-                {isSaving ? 'กำลังบันทึก...' : 'บันทึกผลการวิเคราะห์'}
-              </button>
-              
-              <button 
-                className="view-data-btn"
-                onClick={handleViewSavedData}
-              >
-                <Database className="btn-icon" />
-                ดูข้อมูลที่บันทึก
-              </button>
-            </div>
+            <button 
+              className={`save-btn ${isSaving ? 'saving' : ''}`}
+              onClick={handleSaveToFirebase}
+              disabled={isSaving}
+            >
+              <Save className="btn-icon" />
+              {isSaving ? 'กำลังบันทึก...' : 'บันทึกไป Firebase'}
+            </button>
             
             {saveStatus && (
               <div className={`save-status ${saveStatus.type}`}>
-                {saveStatus.type === 'success' ? '✅' : '❌'} {saveStatus.message}
+                {saveStatus.type === 'success' ? '✅' : saveStatus.type === 'info' ? '🔄' : '❌'} {saveStatus.message}
               </div>
             )}
           </div>
@@ -370,4 +307,4 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   );
 };
 
-export default EmotionDetection;
+export default FirebaseEmotionDetection;

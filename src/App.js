@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
-import EmotionDetection from './components/EmotionDetection';
+// import EmotionDetection from './components/EmotionDetection';
+import FirebaseEmotionDetection from './components/FirebaseEmotionDetection';
 import ActivityRecommendation from './components/ActivityRecommendation';
 import CommunityBoard from './components/CommunityBoard';
 import Profile from './components/Profile';
@@ -100,7 +101,7 @@ function App() {
       
       <main className="main-content">
         {currentView === 'detection' && (
-          <EmotionDetection 
+          <FirebaseEmotionDetection 
             onEmotionDetected={handleEmotionDetected}
             currentEmotion={detectedEmotion}
             onEmotionChange={handleEmotionChange}

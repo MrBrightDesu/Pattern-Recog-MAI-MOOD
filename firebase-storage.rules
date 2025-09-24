@@ -1,0 +1,15 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // อนุญาตให้อัปโหลดไฟล์ในโฟลเดอร์ emotion-analysis
+    match /emotion-analysis/{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    // อนุญาตให้อัปโหลดไฟล์อื่นๆ สำหรับการพัฒนา
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

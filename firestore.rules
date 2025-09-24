@@ -1,0 +1,15 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // อนุญาตให้อ่านและเขียนข้อมูล emotionAnalysis
+    match /emotionAnalysis/{document} {
+      allow read, write: if true;
+    }
+    
+    // อนุญาตให้เข้าถึงเอกสารอื่นๆ สำหรับการพัฒนา
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

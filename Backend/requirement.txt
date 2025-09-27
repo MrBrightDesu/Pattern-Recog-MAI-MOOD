@@ -6,6 +6,6 @@ torchaudio
 mtcnn
 opencv-python
 pillow
-torchaudio
 pydub
 imageio-ffmpeg
+scikit-learn

@@ -14,16 +14,16 @@ import librosa
 try:
     from .model_image import model, classes as class_names
     from .utlis import detect_and_crop_face, predict_face_image
-    from .model_audio import predict_audio as predict_audio_emotion
+    from .model_audio import predict_audio as predict_audio_emotion, classes as audio_classes
 except Exception:
     try:
         from Backend.model_image import model, classes as class_names
         from Backend.utlis import detect_and_crop_face, predict_face_image
-        from Backend.model_audio import predict_audio as predict_audio_emotion
+        from Backend.model_audio import predict_audio as predict_audio_emotion, classes as audio_classes
     except Exception:
         from model_image import model, classes as class_names
         from utlis import detect_and_crop_face, predict_face_image
-        from model_audio import predict_audio as predict_audio_emotion
+        from model_audio import predict_audio as predict_audio_emotion, classes as audio_classes
 
 app = FastAPI(title="Emotion Detection API")
 
@@ -47,6 +47,87 @@ def _save_temp_file(contents: bytes, filename: Optional[str]) -> str:
         return tmp.name
     finally:
         tmp.close()
+
+
+def _map_emotion_classes(image_emotion: str, audio_emotion: str) -> tuple:
+    """Map emotion classes from different models to a common format."""
+    # Mapping from image classes to common classes
+    image_mapping = {
+        'angry': 'anger',
+        'disgust': 'disgust', 
+        'fear': 'fear',
+        'happy': 'happiness',
+        'neutral': 'neutral',
+        'sad': 'sadness',
+        'surprise': 'surprise'
+    }
+    
+    # Audio classes are already in common format
+    mapped_image_emotion = image_mapping.get(image_emotion, image_emotion)
+    return mapped_image_emotion, audio_emotion
+
+
+def _weighted_fusion(image_result: dict, audio_result: dict, audio_weight: float = 0.7) -> dict:
+    """Combine image and audio predictions with audio priority when emotions differ."""
+    # Get image emotion and probabilities
+    image_emotion = image_result["emotion"]
+    image_probabilities = image_result.get("probabilities", {})
+    image_confidence = image_result.get("confidence", 0.5)
+    
+    # Get audio emotion and probabilities
+    audio_emotion = audio_result["emotion"]
+    audio_probabilities = audio_result.get("probabilities", {})
+    audio_confidence = audio_result.get("confidence", 0.5)
+    
+    # Map emotions to common classes
+    mapped_image_emotion, mapped_audio_emotion = _map_emotion_classes(image_emotion, audio_emotion)
+    
+    # Check if emotions are the same
+    if mapped_image_emotion == mapped_audio_emotion:
+        # Same emotion - use normal weighted fusion with higher confidence
+        final_emotion = mapped_audio_emotion
+        final_confidence = min(0.95, (audio_confidence + image_confidence) / 2)  # Average confidence when both agree
+        fusion_method = "agreement"
+    else:
+        # Different emotions - prioritize audio
+        final_emotion = mapped_audio_emotion
+        final_confidence = audio_confidence * 0.9  # Slightly reduce confidence due to disagreement
+        fusion_method = "audio_priority"
+    
+    # Create weighted probabilities for transparency using actual probabilities
+    all_emotions = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
+    weighted_probs = {}
+    
+    for emotion in all_emotions:
+        # Get actual probabilities from both models
+        audio_prob = audio_probabilities.get(emotion, 0.0)
+        
+        # Map image probability from image classes to common classes
+        image_prob = 0.0
+        for img_emotion, img_prob in image_probabilities.items():
+            mapped_img_emotion, _ = _map_emotion_classes(img_emotion, emotion)
+            if mapped_img_emotion == emotion:
+                image_prob = img_prob
+                break
+        
+        # Apply weights based on fusion method
+        if fusion_method == "agreement":
+            # When emotions agree, use balanced weights
+            weighted_probs[emotion] = (audio_prob * 0.6) + (image_prob * 0.4)
+        else:
+            # When emotions differ, heavily favor audio
+            weighted_probs[emotion] = (audio_prob * 0.85) + (image_prob * 0.15)
+    
+    return {
+        "emotion": final_emotion,
+        "confidence": final_confidence,
+        "image_emotion": mapped_image_emotion,
+        "audio_emotion": mapped_audio_emotion,
+        "image_confidence": image_confidence,
+        "audio_confidence": audio_confidence,
+        "fusion_method": fusion_method,
+        "weighted_probabilities": weighted_probs
+    }
 
 
 # =========================
@@ -75,7 +156,16 @@ async def predict(file: UploadFile = File(...)):
 
         # Predict emotion
         try:
-            emotion = predict_face_image(face_crop, model, class_names)
+            result = predict_face_image(face_crop, model, class_names)
+            # Handle both old string format and new dict format
+            if isinstance(result, dict):
+                emotion = result["emotion"]
+                confidence = result.get("confidence", 0.5)
+                probabilities = result.get("probabilities", {})
+            else:
+                emotion = result
+                confidence = 0.5
+                probabilities = {}
         except Exception as pred_e:
             print("prediction error:\n" + traceback.format_exc())
             return JSONResponse(content={"error": f"prediction_failed: {pred_e}"}, status_code=500)
@@ -90,6 +180,8 @@ async def predict(file: UploadFile = File(...)):
 
         return {
             "emotion": emotion,
+            "confidence": confidence,
+            "probabilities": probabilities,
             "face_coords": {
                 "x": int(face_coords[0]),
                 "y": int(face_coords[1]),
@@ -155,13 +247,27 @@ async def predict_both(image: UploadFile = File(...), audio: UploadFile = File(.
         if img is None:
             return JSONResponse(content={"error": "Invalid image"}, status_code=400)
 
-        face_crop, face_coords = detect_and_crop_face(img, use_anime_detection=False)
+        # Detect & crop face
+        try:
+            face_crop, face_coords = detect_and_crop_face(img, use_anime_detection=False)
+        except Exception as det_e:
+            print("face detection error in predict-both:\n" + traceback.format_exc())
+            return JSONResponse(content={"error": f"face_detection_failed: {det_e}"}, status_code=500)
+        
         if face_crop is None:
             return JSONResponse(content={"error": "No face detected"}, status_code=404)
 
-        image_emotion = predict_face_image(face_crop, model, class_names)
+        # Predict image emotion
+        try:
+            image_result = predict_face_image(face_crop, model, class_names)
+            # Ensure image_result is in dict format
+            if not isinstance(image_result, dict):
+                image_result = {"emotion": image_result, "confidence": 0.5, "probabilities": {}}
+        except Exception as pred_e:
+            print("image prediction error in predict-both:\n" + traceback.format_exc())
+            return JSONResponse(content={"error": f"image_prediction_failed: {pred_e}"}, status_code=500)
 
-        # Process audio
+        # Process audio using the new CRNN model
         audio_bytes = await audio.read()
         tmp_path = _save_temp_file(audio_bytes, audio.filename)
         try:
@@ -169,24 +275,17 @@ async def predict_both(image: UploadFile = File(...), audio: UploadFile = File(.
             waveform, sr = torchaudio.load(tmp_path)
             audio_result = predict_audio_emotion(waveform, sr)
             
-            # Handle both old string format and new dict format
-            if isinstance(audio_result, dict):
-                audio_emotion = audio_result["emotion"]
-            else:
-                audio_emotion = audio_result
+            # Ensure audio_result is in dict format with probabilities
+            if not isinstance(audio_result, dict):
+                audio_result = {"emotion": audio_result, "confidence": 0.5, "probabilities": {}}
         finally:
             try:
                 os.remove(tmp_path)
             except:
                 pass
 
-        # Simple fusion
-        if image_emotion == audio_emotion:
-            final_emotion = image_emotion
-            confidence = 0.9
-        else:
-            final_emotion = image_emotion
-            confidence = 0.6
+        # Use weighted fusion with audio priority (70% audio, 30% image)
+        fusion_result = _weighted_fusion(image_result, audio_result, audio_weight=0.7)
 
         # Encode cropped face
         try:
@@ -197,10 +296,14 @@ async def predict_both(image: UploadFile = File(...), audio: UploadFile = File(.
             crop_b64 = None
 
         return {
-            "emotion": final_emotion,
-            "image_emotion": image_emotion,
-            "audio_emotion": audio_emotion,
-            "confidence": confidence,
+            "emotion": fusion_result["emotion"],
+            "confidence": fusion_result["confidence"],
+            "image_emotion": fusion_result["image_emotion"],
+            "audio_emotion": fusion_result["audio_emotion"],
+            "image_confidence": fusion_result["image_confidence"],
+            "audio_confidence": fusion_result["audio_confidence"],
+            "fusion_method": fusion_result["fusion_method"],
+            "weighted_probabilities": fusion_result["weighted_probabilities"],
             "face_coords": {
                 "x": int(face_coords[0]),
                 "y": int(face_coords[1]),

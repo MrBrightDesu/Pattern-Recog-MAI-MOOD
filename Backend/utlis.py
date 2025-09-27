@@ -165,8 +165,14 @@ def predict_face_image(face_image, model, class_names):
     img_t = img_t.to(model_device)
     with torch.no_grad():
         outputs = model(img_t)
-        _, pred = torch.max(outputs, 1)
-    return class_names[pred.item()]
+        probabilities = torch.softmax(outputs, dim=1)
+        confidence, pred = torch.max(probabilities, 1)
+    
+    return {
+        "emotion": class_names[pred.item()],
+        "confidence": confidence.item(),
+        "probabilities": {class_names[i]: probabilities[0][i].item() for i in range(len(class_names))}
+    }
 
 # === Path-based helpers (for quick local testing/CLI) ===
 def detect_and_crop_face_from_path(image_path, target_size=(224, 224)):

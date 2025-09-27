@@ -118,14 +118,18 @@ async def predict_audio(file: UploadFile = File(...)):
         try:
             import torchaudio
             waveform, sr = torchaudio.load(tmp_path)
-            emotion = predict_audio_emotion(waveform, sr)
+            result = predict_audio_emotion(waveform, sr)
+            
+            # Handle both old string format and new dict format
+            if isinstance(result, dict):
+                return result
+            else:
+                return {"emotion": result}
         finally:
             try:
                 os.remove(tmp_path)
             except:
                 pass
-
-        return {"emotion": emotion}
 
     except Exception as e:
         print("/predict-audio error:\n" + traceback.format_exc())
@@ -161,8 +165,15 @@ async def predict_both(image: UploadFile = File(...), audio: UploadFile = File(.
         audio_bytes = await audio.read()
         tmp_path = _save_temp_file(audio_bytes, audio.filename)
         try:
-            y, sr = librosa.load(tmp_path, sr=22050)
-            audio_emotion = run_audio_model(y, sr)
+            import torchaudio
+            waveform, sr = torchaudio.load(tmp_path)
+            audio_result = predict_audio_emotion(waveform, sr)
+            
+            # Handle both old string format and new dict format
+            if isinstance(audio_result, dict):
+                audio_emotion = audio_result["emotion"]
+            else:
+                audio_emotion = audio_result
         finally:
             try:
                 os.remove(tmp_path)

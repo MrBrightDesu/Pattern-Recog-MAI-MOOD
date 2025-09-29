@@ -45,23 +45,25 @@ function AppContent() {
     const isPositive = e === 'happy' || e === 'happiness' || e === 'surprise';
     const isNegative = e === 'sad' || e === 'sadness' || e === 'angry' || e === 'anger' || e === 'fear' || e === 'disgust';
     if (isPositive) {
-      // ฐานสีเหลืองเดียวกันก่อน gradient
-      return `
-        radial-gradient(circle at 20% 50%, rgba(251, 238, 149, 0.45) 0%, transparent 55%),
-        radial-gradient(circle at 80% 20%, rgba(251, 238, 149, 0.35) 0%, transparent 55%),
-        radial-gradient(circle at 40% 80%, rgba(251, 238, 149, 0.4) 0%, transparent 55%),
-        linear-gradient(135deg, #FBEE95, #FFF4B8, #FFFBE0)
-      `;
-    }
-    if (isNegative) {
-      // ฐานสีม่วงอ่อนเดียวกันก่อน gradient
-      return `
-        radial-gradient(circle at 25% 30%, rgba(192, 175, 226, 0.45) 0%, transparent 55%),
-        radial-gradient(circle at 75% 70%, rgba(192, 175, 226, 0.35) 0%, transparent 55%),
-        radial-gradient(circle at 50% 50%, rgba(192, 175, 226, 0.4) 0%, transparent 55%),
-        linear-gradient(135deg, #C0AFE2, #D7C7EB, #E9DEF5)
-      `;
-    }
+  // ฐานสีเหลืองส้ม pastel สำหรับอารมณ์บวก
+        return `
+          radial-gradient(circle at 20% 50%, rgba(243, 220, 174, 0.45) 0%, transparent 55%),
+          radial-gradient(circle at 80% 20%, hsla(42, 57%, 83%, 0.35) 0%, transparent 55%),
+          radial-gradient(circle at 40% 80%, rgba(255, 240, 200, 0.4) 0%, transparent 55%),
+          linear-gradient(135deg, #f0a824ff, #eec55dff, #f1d997ff)
+        `;
+      }
+
+      if (isNegative) {
+        // ฐานสีม่วงเข้ม pastel สำหรับอารมณ์ลบ
+        return `
+          radial-gradient(circle at 25% 30%, rgba(165, 125, 220, 0.45) 0%, transparent 55%),
+          radial-gradient(circle at 75% 70%, rgba(180, 140, 230, 0.35) 0%, transparent 55%),
+          radial-gradient(circle at 50% 50%, rgba(200, 160, 245, 0.4) 0%, transparent 55%),
+          linear-gradient(135deg, #864bd4ff, #B48CEC, #C8A0F5)
+        `;
+      }
+
     // neutral เดิม
     return `
       radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.8) 0%, transparent 50%),

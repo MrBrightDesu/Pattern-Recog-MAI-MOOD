@@ -66,3 +66,4 @@ function ErrorPopup({ isOpen, onClose, title, message, type = 'error' }) {
 }
 
 export default ErrorPopup;
+

@@ -9,7 +9,8 @@ import os
 import tempfile
 from typing import Optional
 import librosa
-# Support running as a package (Backend.main) or from inside Backend directory
+
+# Import models (support package or direct)
 try:
     from .model_image import model, classes as class_names
     from .utlis import detect_and_crop_face, predict_face_image
@@ -25,12 +26,6 @@ except Exception:
         from model_audio import predict_audio as predict_audio_emotion
 
 app = FastAPI(title="Emotion Detection API")
-def run_audio_model(waveform, sr):
-    """
-    Run the audio emotion prediction model.
-    """
-    return predict_audio_emotion(waveform, sr) 
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,17 +35,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def _save_temp_file(contents: bytes, filename: Optional[str]) -> str:
+    """Save uploaded file to a temporary file."""
+    suffix = None
+    if filename and "." in filename:
+        suffix = filename[filename.rfind("."):]
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix or ".bin")
+    try:
+        tmp.write(contents)
+        return tmp.name
+    finally:
+        tmp.close()
+
+
+# =========================
+# Image prediction endpoint
+# =========================
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     try:
-        # อ่านไฟล์ที่อัพโหลด
         contents = await file.read()
         if not contents:
             return JSONResponse(content={"error": "Empty file"}, status_code=400)
 
         npimg = np.frombuffer(contents, np.uint8)
         img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-
         if img is None:
             return JSONResponse(content={"error": "Invalid image"}, status_code=400)
 
@@ -70,7 +80,7 @@ async def predict(file: UploadFile = File(...)):
             print("prediction error:\n" + traceback.format_exc())
             return JSONResponse(content={"error": f"prediction_failed: {pred_e}"}, status_code=500)
 
-        # Encode cropped face (RGB -> BGR for OpenCV encode)
+        # Encode cropped face
         try:
             face_bgr = cv2.cvtColor(face_crop, cv2.COLOR_RGB2BGR)
             ok, buf = cv2.imencode('.jpg', face_bgr)
@@ -88,112 +98,49 @@ async def predict(file: UploadFile = File(...)):
             },
             "face_crop_image": f"data:image/jpeg;base64,{crop_b64}" if crop_b64 else None
         }
+
     except Exception as e:
         print("/predict error:\n" + traceback.format_exc())
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-<<<<<<< HEAD
-=======
-
-def _save_temp_file(contents: bytes, filename: Optional[str]) -> str:
-    suffix = None
-    if filename and "." in filename:
-        suffix = filename[filename.rfind("."):]
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix or ".bin")
-    try:
-        tmp.write(contents)
-        return tmp.name
-    finally:
-        tmp.close()
-        
-# =========================
-# Audio model inference
-# =========================
-def run_audio_model(y, sr):
-    """
-    Run the audio emotion prediction model with mel-spectrogram.
-    """
-    # ✅ Mel-spectrogram
-    mel_spec = librosa.feature.melspectrogram(
-        y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=128
-    )
-    mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
-
-    # Reshape → (1, n_mels, time, 1)
-    spectrogram = mel_spec_db[np.newaxis, ..., np.newaxis]
-
-    # TODO: เรียกโมเดลจริง (ตอนนี้ใช้ dummy)
-    prediction = float(np.mean(spectrogram))
-
-    return prediction
 
 # =========================
-# FastAPI endpoints
+# Audio prediction endpoint
 # =========================
->>>>>>> bright
 @app.post("/predict-audio")
 async def predict_audio(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         if not contents:
-<<<<<<< HEAD
-            return JSONResponse(content={"error": "Empty file"}, status_code=400)
-
-        # Write to a temp file for torchaudio to load reliably across platforms
-        import tempfile, os
-        import torchaudio
-        suffix = os.path.splitext(file.filename or "")[1] or ".wav"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(contents)
-            tmp_path = tmp.name
-
-        try:
-            waveform, sr = torchaudio.load(tmp_path)
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
-
-        try:
-            emotion = predict_audio_emotion(waveform, sr)
-        except Exception as pred_e:
-            print("audio prediction error:\n" + traceback.format_exc())
-            return JSONResponse(content={"error": f"audio_prediction_failed: {pred_e}"}, status_code=500)
-
-        return {"emotion": emotion}
-    except Exception as e:
-        print("/predict-audio error:\n" + traceback.format_exc())
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-=======
             return JSONResponse(content={"error": "Empty audio file"}, status_code=400)
 
-        # Save to temp
         tmp_path = _save_temp_file(contents, file.filename)
-
         try:
-            # Load audio
             import torchaudio
             waveform, sr = torchaudio.load(tmp_path)
-
-            # ✅ ใช้โมเดลจริงจาก model_audio.py
-            prediction = predict_audio_emotion(waveform, sr)
-
-            return {
-                "filename": file.filename,
-                "prediction": prediction,   # จะได้เป็น "sad" / "happy" ฯลฯ
-            }
+            result = predict_audio_emotion(waveform, sr)
+            
+            # Handle both old string format and new dict format
+            if isinstance(result, dict):
+                return result
+            else:
+                return {"emotion": result}
         finally:
             try:
                 os.remove(tmp_path)
             except:
                 pass
+
     except Exception as e:
         print("/predict-audio error:\n" + traceback.format_exc())
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+
+# =========================
+# Combined prediction endpoint
+# =========================
 @app.post("/predict-both")
-async def predict_both(image: UploadFile = File(None), audio: UploadFile = File(None)):
+async def predict_both(image: UploadFile = File(...), audio: UploadFile = File(...)):
     try:
         if image is None or audio is None:
             return JSONResponse(
@@ -201,7 +148,7 @@ async def predict_both(image: UploadFile = File(None), audio: UploadFile = File(
                 status_code=400,
             )
 
-        # ================== Process image ==================
+        # Process image
         image_bytes = await image.read()
         npimg = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
@@ -214,19 +161,26 @@ async def predict_both(image: UploadFile = File(None), audio: UploadFile = File(
 
         image_emotion = predict_face_image(face_crop, model, class_names)
 
-        # ================== Process audio ==================
+        # Process audio
         audio_bytes = await audio.read()
         tmp_path = _save_temp_file(audio_bytes, audio.filename)
         try:
-            y, sr = librosa.load(tmp_path, sr=22050)
-            audio_emotion = run_audio_model(y, sr)
+            import torchaudio
+            waveform, sr = torchaudio.load(tmp_path)
+            audio_result = predict_audio_emotion(waveform, sr)
+            
+            # Handle both old string format and new dict format
+            if isinstance(audio_result, dict):
+                audio_emotion = audio_result["emotion"]
+            else:
+                audio_emotion = audio_result
         finally:
             try:
                 os.remove(tmp_path)
             except:
                 pass
 
-        # ================== Fusion ==================
+        # Simple fusion
         if image_emotion == audio_emotion:
             final_emotion = image_emotion
             confidence = 0.9
@@ -253,9 +207,7 @@ async def predict_both(image: UploadFile = File(None), audio: UploadFile = File(
                 "w": int(face_coords[2]),
                 "h": int(face_coords[3]),
             },
-            "face_crop_image": f"data:image/jpeg;base64,{crop_b64}"
-            if crop_b64
-            else None,
+            "face_crop_image": f"data:image/jpeg;base64,{crop_b64}" if crop_b64 else None,
         }
 
     except Exception as e:
@@ -263,11 +215,14 @@ async def predict_both(image: UploadFile = File(None), audio: UploadFile = File(
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
+# =========================
+# Health check
+# =========================
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
->>>>>>> bright

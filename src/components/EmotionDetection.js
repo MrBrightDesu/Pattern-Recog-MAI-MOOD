@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Upload, Image, X, Camera, CameraOff, Mic, MicOff, Save, XCircle, Volume2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Upload, Image, X, Camera, CameraOff, Mic, MicOff, Save, XCircle, Volume2, Activity } from 'lucide-react';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import './EmotionDetection.css';
+import './EmotionDetection-activities.css';
 
 const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }) => {
   const [isDetecting, setIsDetecting] = useState(false);
@@ -21,6 +22,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const [audioChunks, setAudioChunks] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [recommendedActivities, setRecommendedActivities] = useState([]);
+  const [showActivities, setShowActivities] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const audioInputRef = useRef(null);
@@ -96,6 +99,60 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     return emotionEmojis[emotion] || '😐';
   };
 
+  // ฟังก์ชันสำหรับสร้างกิจกรรมแนะนำตามอารมณ์
+  const getRecommendedActivities = (emotion) => {
+    const activityRecommendations = {
+      'happiness': [
+        { id: 1, title: 'เดินเล่นในสวนสาธารณะ', description: 'ออกไปสูดอากาศบริสุทธิ์และชื่นชมธรรมชาติ', icon: '🚶‍♀️' },
+        { id: 2, title: 'วาดรูปหรือระบายสี', description: 'ใช้ความคิดสร้างสรรค์ในการสร้างงานศิลปะ', icon: '🎨' },
+        { id: 3, title: 'โทรหาเพื่อนสนิท', description: 'แบ่งปันความสุขและสร้างความสัมพันธ์ที่ดี', icon: '📞' }
+      ],
+      'sadness': [
+        { id: 4, title: 'ฟังเพลงที่ชอบ', description: 'ให้เพลงช่วยเยียวยาจิตใจ', icon: '🎵' },
+        { id: 5, title: 'เขียนไดอารี่', description: 'ระบายความรู้สึกผ่านการเขียน', icon: '📝' },
+        { id: 6, title: 'ออกกำลังกายเบาๆ', description: 'การออกกำลังกายช่วยเพิ่มสารเอ็นดอร์ฟิน', icon: '🧘‍♀️' }
+      ],
+      'anger': [
+        { id: 7, title: 'วิ่งหรือออกกำลังกายหนัก', description: 'ปลดปล่อยพลังงานและความเครียด', icon: '🏃‍♂️' },
+        { id: 8, title: 'ทำความสะอาดบ้าน', description: 'ใช้พลังงานในการทำกิจกรรมที่เป็นประโยชน์', icon: '🧹' },
+        { id: 9, title: 'ฝึกหายใจลึกๆ', description: 'การหายใจช่วยให้ใจสงบและผ่อนคลาย', icon: '🫁' }
+      ],
+      'surprise': [
+        { id: 10, title: 'ลองทำอาหารใหม่', description: 'ทดลองทำเมนูที่ยังไม่เคยทำ', icon: '👨‍🍳' },
+        { id: 11, title: 'ไปเที่ยวสถานที่ใหม่', description: 'สำรวจสถานที่ที่ยังไม่เคยไป', icon: '🗺️' }
+      ],
+      'fear': [
+        { id: 12, title: 'พูดคุยกับคนที่ไว้ใจ', description: 'แบ่งปันความกังวลกับคนใกล้ตัว', icon: '💬' },
+        { id: 13, title: 'ทำกิจกรรมที่คุ้นเคย', description: 'ทำสิ่งที่ทำให้รู้สึกปลอดภัยและสบายใจ', icon: '🏠' }
+      ],
+      'disgust': [
+        { id: 14, title: 'ทำความสะอาดและจัดระเบียบ', description: 'สร้างสภาพแวดล้อมที่สะอาดและเป็นระเบียบ', icon: '🧽' }
+      ],
+      'neutral': [
+        { id: 15, title: 'อ่านหนังสือที่สนใจ', description: 'ใช้เวลากับหนังสือที่อยากอ่าน', icon: '📚' },
+        { id: 16, title: 'เรียนรู้ทักษะใหม่', description: 'พัฒนาตนเองด้วยทักษะใหม่ๆ', icon: '🎓' }
+      ],
+      // Backward compatibility
+      'happy': [
+        { id: 1, title: 'เดินเล่นในสวนสาธารณะ', description: 'ออกไปสูดอากาศบริสุทธิ์และชื่นชมธรรมชาติ', icon: '🚶‍♀️' },
+        { id: 2, title: 'วาดรูปหรือระบายสี', description: 'ใช้ความคิดสร้างสรรค์ในการสร้างงานศิลปะ', icon: '🎨' },
+        { id: 3, title: 'โทรหาเพื่อนสนิท', description: 'แบ่งปันความสุขและสร้างความสัมพันธ์ที่ดี', icon: '📞' }
+      ],
+      'sad': [
+        { id: 4, title: 'ฟังเพลงที่ชอบ', description: 'ให้เพลงช่วยเยียวยาจิตใจ', icon: '🎵' },
+        { id: 5, title: 'เขียนไดอารี่', description: 'ระบายความรู้สึกผ่านการเขียน', icon: '📝' },
+        { id: 6, title: 'ออกกำลังกายเบาๆ', description: 'การออกกำลังกายช่วยเพิ่มสารเอ็นดอร์ฟิน', icon: '🧘‍♀️' }
+      ],
+      'angry': [
+        { id: 7, title: 'วิ่งหรือออกกำลังกายหนัก', description: 'ปลดปล่อยพลังงานและความเครียด', icon: '🏃‍♂️' },
+        { id: 8, title: 'ทำความสะอาดบ้าน', description: 'ใช้พลังงานในการทำกิจกรรมที่เป็นประโยชน์', icon: '🧹' },
+        { id: 9, title: 'ฝึกหายใจลึกๆ', description: 'การหายใจช่วยให้ใจสงบและผ่อนคลาย', icon: '🫁' }
+      ]
+    };
+    
+    return activityRecommendations[emotion] || activityRecommendations['neutral'];
+  };
+
   const analyzeFile = async (file, audioFile = null) => {
     if (!file && !audioFile) return;
     setIsDetecting(true);
@@ -145,6 +202,11 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
           confidence: data.confidence
         });
         if (onEmotionChange) onEmotionChange(data.emotion);
+        
+        // แสดงกิจกรรมแนะนำตามอารมณ์ที่ตรวจจับได้
+        const activities = getRecommendedActivities(data.emotion);
+        setRecommendedActivities(activities);
+        setShowActivities(true);
       }
     } catch (err) {
       console.error(err);
@@ -218,6 +280,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setUploadedFile(null);
     setAudioFile(null);
     setLastResponseJson('');
+    setRecommendedActivities([]);
+    setShowActivities(false);
     stopCamera();
     if (onEmotionChange) onEmotionChange('neutral');
   };
@@ -246,6 +310,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
         faceCoords: result.coords || null,
         hasImage: !!uploadedFile,
         hasAudio: !!audioFile,
+        recommendedActivities: recommendedActivities,
         createdAt: new Date().toISOString(),
         // ข้อมูลเพิ่มเติม
         deviceInfo: {
@@ -850,6 +915,44 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
         </div>
       )}
 
+      {/* แสดงกิจกรรมแนะนำ */}
+      {showActivities && recommendedActivities.length > 0 && (
+        <div className="recommended-activities">
+          <h3>กิจกรรมที่แนะนำสำหรับคุณ</h3>
+          <p>เลือกกิจกรรมที่เหมาะสมกับอารมณ์ปัจจุบันของคุณ</p>
+          
+          <div className="activities-grid">
+            {recommendedActivities.map(activity => (
+              <div key={activity.id} className="activity-card">
+                <div className="activity-header">
+                  <span className="activity-icon">{activity.icon}</span>
+                </div>
+                
+                <h4 className="activity-title">{activity.title}</h4>
+                <p className="activity-description">{activity.description}</p>
+                
+                <button 
+                  className="activity-btn"
+                  onClick={() => {
+                    // สามารถเพิ่มการบันทึกกิจกรรมที่เลือกได้ในอนาคต
+                    alert(`คุณเลือกกิจกรรม: ${activity.title}`);
+                  }}
+                >
+                  <Activity className="btn-icon" />
+                  เลือกกิจกรรมนี้
+                </button>
+              </div>
+            ))}
+          </div>
+          
+          <button 
+            className="hide-activities-btn"
+            onClick={() => setShowActivities(false)}
+          >
+            ซ่อนกิจกรรมแนะนำ
+          </button>
+        </div>
+      )}
 
       {lastResponseJson && (
         <div className="emotion-result" style={{ marginTop: 16 }}>

@@ -36,18 +36,6 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     return '#3b82f6';
   };
 
-<<<<<<< HEAD
-=======
-  // ฟังก์ชันสำหรับกำหนด gradient ตามอารมณ์ (ใช้ฐานสีรวม)
-  const getEmotionGradient = (emotion) => {
-    const e = String(emotion || '').toLowerCase();
-    const isPositive = e === 'happiness' || e === 'surprise' || e === 'happy';
-    const isNegative = e === 'sadness' || e === 'anger' || e === 'fear' || e === 'disgust' || e === 'sad' || e === 'angry';
-    if (isPositive) return 'linear-gradient(135deg, #FBEE95, #FFF4B8, #FFFBE0)';
-    if (isNegative) return 'linear-gradient(135deg, #C0AFE2, #D7C7EB, #E9DEF5)';
-    return 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)';
-  };
->>>>>>> ten2.5
 
   // ฟังก์ชันสำหรับกำหนด emoji ตามอารมณ์
   const getEmoji = (emotion) => {

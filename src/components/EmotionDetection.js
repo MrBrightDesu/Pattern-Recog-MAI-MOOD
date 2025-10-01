@@ -121,6 +121,18 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    
+    // ตรวจสอบชนิดของไฟล์ภาพ
+    if (!validateFileType(file, 'image')) {
+      setSaveStatus({ 
+        type: 'error', 
+        message: 'ไฟล์ภาพไม่ถูกต้อง กรุณาเลือกไฟล์ JPG, PNG หรือ GIF เท่านั้น' 
+      });
+      // รีเซ็ต input
+      e.target.value = '';
+      return;
+    }
+    
     setUploadedFile(file);
     setSelectedImage(URL.createObjectURL(file));
     if (predictMode === 'image' || predictMode === 'both') {
@@ -131,6 +143,18 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const handleAudioUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    
+    // ตรวจสอบชนิดของไฟล์เสียง
+    if (!validateFileType(file, 'audio')) {
+      setSaveStatus({ 
+        type: 'error', 
+        message: 'ไฟล์เสียงไม่ถูกต้อง กรุณาเลือกไฟล์ WAV, MP3 หรือ M4A เท่านั้น' 
+      });
+      // รีเซ็ต input
+      e.target.value = '';
+      return;
+    }
+    
     setAudioFile(file);
     if (predictMode === 'audio' || predictMode === 'both') {
       await analyzeFile(uploadedFile, file);
@@ -183,10 +207,61 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     if (onEmotionChange) onEmotionChange('neutral');
   };
 
+  // ฟังก์ชันตรวจสอบชนิดของไฟล์
+  const validateFileType = (file, expectedType) => {
+    if (!file) return true; // ถ้าไม่มีไฟล์ให้ผ่าน
+    
+    const fileType = file.type.toLowerCase();
+    
+    if (expectedType === 'image') {
+      return fileType.startsWith('image/') && 
+             ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(fileType);
+    } else if (expectedType === 'audio') {
+      return fileType.startsWith('audio/') && 
+             ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/m4a', 'audio/mp4'].includes(fileType);
+    }
+    
+    return false;
+  };
+
   const handleSave = async () => {
     if (!result || !currentUser) {
       console.error('No result or user to save');
       return;
+    }
+
+    // ตรวจสอบชนิดของไฟล์ตามโหมดการวิเคราะห์
+    if (predictMode === 'image' && uploadedFile && !validateFileType(uploadedFile, 'image')) {
+      setSaveStatus({ 
+        type: 'error', 
+        message: 'ไฟล์ภาพไม่ถูกต้อง กรุณาเลือกไฟล์ JPG, PNG หรือ GIF เท่านั้น' 
+      });
+      return;
+    }
+
+    if (predictMode === 'audio' && audioFile && !validateFileType(audioFile, 'audio')) {
+      setSaveStatus({ 
+        type: 'error', 
+        message: 'ไฟล์เสียงไม่ถูกต้อง กรุณาเลือกไฟล์ WAV, MP3 หรือ M4A เท่านั้น' 
+      });
+      return;
+    }
+
+    if (predictMode === 'both') {
+      if (uploadedFile && !validateFileType(uploadedFile, 'image')) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'ไฟล์ภาพไม่ถูกต้อง กรุณาเลือกไฟล์ JPG, PNG หรือ GIF เท่านั้น' 
+        });
+        return;
+      }
+      if (audioFile && !validateFileType(audioFile, 'audio')) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'ไฟล์เสียงไม่ถูกต้อง กรุณาเลือกไฟล์ WAV, MP3 หรือ M4A เท่านั้น' 
+        });
+        return;
+      }
     }
 
     try {
@@ -207,6 +282,9 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
         faceCoords: result.coords || null,
         hasImage: !!uploadedFile,
         hasAudio: !!audioFile,
+        // เก็บข้อมูลชนิดของไฟล์
+        imageFileType: uploadedFile ? uploadedFile.type : null,
+        audioFileType: audioFile ? audioFile.type : null,
         createdAt: new Date().toISOString(),
         // ข้อมูลเพิ่มเติม
         deviceInfo: {

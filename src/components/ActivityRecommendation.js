@@ -222,9 +222,14 @@ const ActivityRecommendation = ({ emotion, onActivityCompleted, onBackToDetectio
               </div>
               
               {!completedActivities.has(activity.id) ? (
-                <button onClick={() => handleActivityComplete(activity)}>
-                <CheckCircle className="btn-icon" /> ทำกิจกรรมนี้
-              </button>
+                <button
+                  type="button"
+                  className="complete-btn"
+                  aria-label={`ทำกิจกรรม: ${activity.title}`}
+                  onClick={() => handleActivityComplete(activity)}
+                >
+                  <CheckCircle className="btn-icon" /> ทำกิจกรรมนี้
+                </button>
               ) : (
                 <div className="completed-status">
                   <CheckCircle className="completed-icon" />

@@ -262,24 +262,12 @@ const Profile = ({ userProfile }) => {
   }, [currentUser, fetchUserData]);
 
   const getEmotionColor = (emotion) => {
-    const colors = {
-      happy: '#10B981',
-      sad: '#3B82F6',
-      angry: '#EF4444',
-      surprise: '#F59E0B',
-      fear: '#8B5CF6',
-      disgust: '#6B7280',
-      neutral: '#6B7280',
-      // ภาษาอังกฤษ
-      Happy: '#10B981',
-      Sad: '#3B82F6',
-      Angry: '#EF4444',
-      Surprised: '#F59E0B',
-      Fearful: '#8B5CF6',
-      Disgusted: '#6B7280',
-      Neutral: '#6B7280'
-    };
-    return colors[emotion] || '#6B7280';
+    const e = String(emotion || '').toLowerCase();
+    const isPositive = e === 'happy' || e === 'happiness' || e === 'surprise';
+    const isNegative = e === 'sad' || e === 'sadness' || e === 'angry' || e === 'anger' || e === 'fear' || e === 'fearful' || e === 'disgust' || e === 'disgusted';
+    if (isPositive) return '#FBEE95';
+    if (isNegative) return '#C0AFE2';
+    return '#6B7280';
   };
 
   const getEmotionEmoji = (emotion) => {

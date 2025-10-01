@@ -33,11 +33,11 @@
 }
 
 .emotion-result {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 1.5rem;
   padding: 2rem;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
 .emotion-display {
@@ -64,11 +64,11 @@
 }
 
 .recommendations-section {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 1.5rem;
   padding: 2rem;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   margin-bottom: 2rem;
 }
 
@@ -93,17 +93,19 @@
 }
 
 .activity-card {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.22);
   border-radius: 1rem;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   transition: all 0.3s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
 .activity-card:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
 }
 
 .activity-header {
@@ -195,6 +197,25 @@
 .btn-icon {
   width: 1.25rem;
   height: 1.25rem;
+}
+
+/* Improve focus visibility for accessibility */
+.complete-btn:focus,
+.back-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+}
+
+/* Motion-reduce support */
+@media (prefers-reduced-motion: reduce) {
+  .activity-card:hover,
+  .complete-btn:hover,
+  .back-btn:hover {
+    transform: none;
+  }
+  .celebration-icon {
+    animation: none;
+  }
 }
 
 .completed-status {

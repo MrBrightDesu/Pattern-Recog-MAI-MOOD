@@ -26,31 +26,28 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const audioInputRef = useRef(null);
   const { currentUser } = useAuth();
 
-  // ฟังก์ชันสำหรับกำหนดสีตามอารมณ์
+  // ฟังก์ชันสำหรับกำหนดสีตามอารมณ์ (ใช้ฐานสีรวม)
   const getEmotionColor = (emotion) => {
-    const emotionColors = {
-      // อารมณ์บวก - สีส้ม
-      'happiness': '#ff6b35',
-      'surprise': '#ff8c42',
-      
-      // อารมณ์ลบ - สีม่วง
-      'sadness': '#8b5cf6',
-      'anger': '#7c3aed',
-      'fear': '#a855f7',
-      'disgust': '#9333ea',
-      
-      // อารมณ์ปกติ - สีฟ้า
-      'neutral': '#3b82f6',
-      
-      // Backward compatibility
-      'happy': '#ff6b35',
-      'sad': '#8b5cf6',
-      'angry': '#7c3aed'
-    };
-    
-    return emotionColors[emotion] || emotionColors['neutral'];
+    const e = String(emotion || '').toLowerCase();
+    const isPositive = e === 'happiness' || e === 'surprise' || e === 'happy';
+    const isNegative = e === 'sadness' || e === 'anger' || e === 'fear' || e === 'disgust' || e === 'sad' || e === 'angry';
+    if (isPositive) return '#FBEE95';
+    if (isNegative) return '#C0AFE2';
+    return '#3b82f6';
   };
 
+<<<<<<< HEAD
+=======
+  // ฟังก์ชันสำหรับกำหนด gradient ตามอารมณ์ (ใช้ฐานสีรวม)
+  const getEmotionGradient = (emotion) => {
+    const e = String(emotion || '').toLowerCase();
+    const isPositive = e === 'happiness' || e === 'surprise' || e === 'happy';
+    const isNegative = e === 'sadness' || e === 'anger' || e === 'fear' || e === 'disgust' || e === 'sad' || e === 'angry';
+    if (isPositive) return 'linear-gradient(135deg, #FBEE95, #FFF4B8, #FFFBE0)';
+    if (isNegative) return 'linear-gradient(135deg, #C0AFE2, #D7C7EB, #E9DEF5)';
+    return 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)';
+  };
+>>>>>>> ten2.5
 
   // ฟังก์ชันสำหรับกำหนด emoji ตามอารมณ์
   const getEmoji = (emotion) => {

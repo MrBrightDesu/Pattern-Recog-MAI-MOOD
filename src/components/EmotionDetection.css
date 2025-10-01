@@ -37,6 +37,72 @@
   }
 }
 
+/* Missing Files Warning */
+.missing-files-warning {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 2px solid rgba(251, 191, 36, 0.3);
+  border-radius: 1rem;
+  text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.warning-content h4 {
+  color: #F59E0B;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.warning-content p {
+  color: #D97706;
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+}
+
+.missing-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.missing-file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(251, 191, 36, 0.1);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  color: #D97706;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.missing-icon {
+  width: 20px;
+  height: 20px;
+  color: #F59E0B;
+}
+
+@media (max-width: 768px) {
+  .missing-files-warning {
+    margin: 1rem 0;
+    padding: 1rem;
+  }
+  
+  .missing-files-list {
+    gap: 0.5rem;
+  }
+  
+  .missing-file-item {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
 /* Emotion Detection Wrapper Styles */
 .emotion-detection-wrapper {
   max-width: 800px;

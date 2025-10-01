@@ -765,6 +765,30 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       )}
 
 
+      {/* ข้อความแจ้งเตือนสำหรับโหมดทั้งคู่ */}
+      {predictMode === 'both' && (!uploadedFile || !audioFile) && (
+        <div className="missing-files-warning">
+          <div className="warning-content">
+            <h4>⚠️ ต้องการไฟล์ครบทั้งสองประเภท</h4>
+            <p>กรุณาเพิ่มไฟล์ภาพและไฟล์เสียงเพื่อเริ่มการวิเคราะห์</p>
+            <div className="missing-files-list">
+              {!uploadedFile && (
+                <div className="missing-file-item">
+                  <Image className="missing-icon" />
+                  <span>ยังไม่มีไฟล์ภาพ</span>
+                </div>
+              )}
+              {!audioFile && (
+                <div className="missing-file-item">
+                  <Volume2 className="missing-icon" />
+                  <span>ยังไม่มีไฟล์เสียง</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Detection Controls - แสดงเมื่อมีไฟล์ที่เหมาะสมกับโหมด */}
       {((predictMode === 'image' && uploadedFile) || 
         (predictMode === 'audio' && audioFile) || 

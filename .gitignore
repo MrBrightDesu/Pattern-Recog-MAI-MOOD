@@ -54,3 +54,5 @@ Backend/__pycache__/utlis.cpython-312.pyc
 =======
 >>>>>>> Fender_2
 >>>>>>> bright
+/node_modules
+/node_modules/.cache

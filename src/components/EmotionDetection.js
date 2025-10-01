@@ -30,17 +30,22 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const getEmotionColor = (emotion) => {
     const emotionColors = {
       // อารมณ์บวก - สีส้ม
-      'happy': '#ff6b35',
+      'happiness': '#ff6b35',
       'surprise': '#ff8c42',
       
       // อารมณ์ลบ - สีม่วง
-      'sad': '#8b5cf6',
-      'angry': '#7c3aed',
+      'sadness': '#8b5cf6',
+      'anger': '#7c3aed',
       'fear': '#a855f7',
       'disgust': '#9333ea',
       
       // อารมณ์ปกติ - สีฟ้า
-      'neutral': '#3b82f6'
+      'neutral': '#3b82f6',
+      
+      // Backward compatibility
+      'happy': '#ff6b35',
+      'sad': '#8b5cf6',
+      'angry': '#7c3aed'
     };
     
     return emotionColors[emotion] || emotionColors['neutral'];
@@ -50,17 +55,22 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const getEmotionGradient = (emotion) => {
     const emotionGradients = {
       // อารมณ์บวก - สีส้ม
-      'happy': 'linear-gradient(135deg, #ff6b35, #ff8c42, #ffa726)',
+      'happiness': 'linear-gradient(135deg, #ff6b35, #ff8c42, #ffa726)',
       'surprise': 'linear-gradient(135deg, #ff8c42, #ffb74d, #ffcc80)',
       
       // อารมณ์ลบ - สีม่วง
-      'sad': 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
-      'angry': 'linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)',
+      'sadness': 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
+      'anger': 'linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)',
       'fear': 'linear-gradient(135deg, #a855f7, #c084fc, #d8b4fe)',
       'disgust': 'linear-gradient(135deg, #9333ea, #a855f7, #c084fc)',
       
       // อารมณ์ปกติ - สีฟ้า
-      'neutral': 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)'
+      'neutral': 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)',
+      
+      // Backward compatibility
+      'happy': 'linear-gradient(135deg, #ff6b35, #ff8c42, #ffa726)',
+      'sad': 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
+      'angry': 'linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)'
     };
     
     return emotionGradients[emotion] || emotionGradients['neutral'];
@@ -69,13 +79,18 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   // ฟังก์ชันสำหรับกำหนด emoji ตามอารมณ์
   const getEmoji = (emotion) => {
     const emotionEmojis = {
-      'happy': '😊',
+      'happiness': '😊',
       'surprise': '😲',
-      'sad': '😢',
-      'angry': '😠',
+      'sadness': '😢',
+      'anger': '😠',
       'fear': '😨',
       'disgust': '🤢',
-      'neutral': '😐'
+      'neutral': '😐',
+      
+      // Backward compatibility
+      'happy': '😊',
+      'sad': '😢',
+      'angry': '😠'
     };
     
     return emotionEmojis[emotion] || '😐';

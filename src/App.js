@@ -41,59 +41,6 @@ function AppContent() {
 
   // ฟังก์ชันสำหรับกำหนดสีพื้นหลังตามอารมณ์ (แบบ fade) - ใช้โทนรวมตามกลุ่มบวก/ลบ
   const getEmotionBackground = (emotion) => {
-<<<<<<< HEAD
-    const emotionBackgrounds = {
-      // อารมณ์บวก - สีส้ม (แบบ fade)
-      'happy': `
-        radial-gradient(circle at 20% 50%, rgba(248, 214, 78, 0.8) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(249, 217, 91, 0.6) 0%, transparent 50%),
-        radial-gradient(circle at 40% 80%, rgba(245, 194, 119, 0.7) 0%, transparent 50%),
-        linear-gradient(135deg, #ffdc42ff, #eeb18bff, #ffa726)
-      `,
-      'surprise': `
-        radial-gradient(circle at 30% 40%, rgba(249, 183, 141, 0.8) 0%, transparent 50%),
-        radial-gradient(circle at 70% 60%, rgba(255, 183, 77, 0.6) 0%, transparent 50%),
-        radial-gradient(circle at 50% 20%, rgba(255, 204, 128, 0.7) 0%, transparent 50%),
-        linear-gradient(135deg, #ffdc42ff, #ffd84dff, #f9db62ff)
-      `,
-      
-      // อารมณ์ลบ - สีม่วง (แบบ fade)
-      'sad': `
-        radial-gradient(circle at 25% 30%, rgba(139, 92, 246, 0.8) 0%, transparent 50%),
-        radial-gradient(circle at 75% 70%, rgba(168, 85, 247, 0.6) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(192, 132, 252, 0.7) 0%, transparent 50%),
-        linear-gradient(135deg, #926aeeff, #a855f7, #c084fc)
-      `,
-      'angry': `
-        radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.8) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.6) 0%, transparent 50%),
-        radial-gradient(circle at 60% 40%, rgba(168, 85, 247, 0.7) 0%, transparent 50%),
-        linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)
-      `,
-      'fear': `
-        radial-gradient(circle at 40% 60%, rgba(168, 85, 247, 0.8) 0%, transparent 50%),
-        radial-gradient(circle at 60% 40%, rgba(192, 132, 252, 0.6) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(216, 180, 254, 0.7) 0%, transparent 50%),
-        linear-gradient(135deg, #a855f7, #c084fc, #d8b4fe)
-      `,
-      'disgust': `
-        radial-gradient(circle at 30% 70%, rgba(147, 51, 234, 0.8) 0%, transparent 50%),
-        radial-gradient(circle at 70% 30%, rgba(168, 85, 247, 0.6) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(192, 132, 252, 0.7) 0%, transparent 50%),
-        linear-gradient(135deg, #9333ea, #a855f7, #c084fc)
-      `,
-      
-      // อารมณ์ปกติ - สีฟ้า (แบบ fade)
-      'neutral': `
-        radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.8) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(96, 165, 250, 0.6) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(147, 197, 253, 0.7) 0%, transparent 50%),
-        linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)
-      `
-    };
-    
-    return emotionBackgrounds[emotion] || emotionBackgrounds['neutral'];
-=======
     const e = String(emotion || '').toLowerCase();
     const isPositive = e === 'happy' || e === 'happiness' || e === 'surprise';
     const isNegative = e === 'sad' || e === 'sadness' || e === 'angry' || e === 'anger' || e === 'fear' || e === 'disgust';
@@ -124,7 +71,6 @@ function AppContent() {
       radial-gradient(circle at 50% 50%, rgba(147, 197, 253, 0.7) 0%, transparent 50%),
       linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)
     `;
->>>>>>> ten2.5
   };
 
 

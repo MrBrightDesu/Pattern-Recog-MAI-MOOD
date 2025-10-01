@@ -233,38 +233,105 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     return false;
   };
 
+  // ฟังก์ชันตรวจสอบว่าสามารถบันทึกได้หรือไม่
+  const canSave = () => {
+    if (predictMode === 'image') {
+      return uploadedFile && validateFileType(uploadedFile, 'image');
+    }
+    if (predictMode === 'audio') {
+      return audioFile && validateFileType(audioFile, 'audio');
+    }
+    if (predictMode === 'both') {
+      return uploadedFile && audioFile && 
+             validateFileType(uploadedFile, 'image') && 
+             validateFileType(audioFile, 'audio');
+    }
+    return false;
+  };
+
+  // ฟังก์ชันให้เหตุผลที่ปุ่มบันทึกถูกปิดใช้งาน
+  const getSaveDisabledReason = () => {
+    if (predictMode === 'image') {
+      if (!uploadedFile) return 'กรุณาเพิ่มไฟล์ภาพก่อนบันทึก';
+      if (!validateFileType(uploadedFile, 'image')) return 'ไฟล์ภาพไม่ถูกต้อง';
+    }
+    if (predictMode === 'audio') {
+      if (!audioFile) return 'กรุณาเพิ่มไฟล์เสียงก่อนบันทึก';
+      if (!validateFileType(audioFile, 'audio')) return 'ไฟล์เสียงไม่ถูกต้อง';
+    }
+    if (predictMode === 'both') {
+      if (!uploadedFile) return 'กรุณาเพิ่มไฟล์ภาพก่อนบันทึก';
+      if (!audioFile) return 'กรุณาเพิ่มไฟล์เสียงก่อนบันทึก';
+      if (!validateFileType(uploadedFile, 'image')) return 'ไฟล์ภาพไม่ถูกต้อง';
+      if (!validateFileType(audioFile, 'audio')) return 'ไฟล์เสียงไม่ถูกต้อง';
+    }
+    return '';
+  };
+
   const handleSave = async () => {
     if (!result || !currentUser) {
       console.error('No result or user to save');
       return;
     }
 
-    // ตรวจสอบชนิดของไฟล์ตามโหมดการวิเคราะห์
-    if (predictMode === 'image' && uploadedFile && !validateFileType(uploadedFile, 'image')) {
-      setSaveStatus({ 
-        type: 'error', 
-        message: 'ไฟล์ภาพไม่ถูกต้อง กรุณาเลือกไฟล์ JPG, PNG หรือ GIF เท่านั้น' 
-      });
-      return;
-    }
-
-    if (predictMode === 'audio' && audioFile && !validateFileType(audioFile, 'audio')) {
-      setSaveStatus({ 
-        type: 'error', 
-        message: 'ไฟล์เสียงไม่ถูกต้อง กรุณาเลือกไฟล์ WAV, MP3 หรือ M4A เท่านั้น' 
-      });
-      return;
-    }
-
-    if (predictMode === 'both') {
-      if (uploadedFile && !validateFileType(uploadedFile, 'image')) {
+    // ตรวจสอบไฟล์ที่จำเป็นตามโหมดการวิเคราะห์
+    if (predictMode === 'image') {
+      if (!uploadedFile) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'กรุณาเพิ่มไฟล์ภาพก่อนบันทึก' 
+        });
+        return;
+      }
+      if (!validateFileType(uploadedFile, 'image')) {
         setSaveStatus({ 
           type: 'error', 
           message: 'ไฟล์ภาพไม่ถูกต้อง กรุณาเลือกไฟล์ JPG, PNG หรือ GIF เท่านั้น' 
         });
         return;
       }
-      if (audioFile && !validateFileType(audioFile, 'audio')) {
+    }
+
+    if (predictMode === 'audio') {
+      if (!audioFile) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'กรุณาเพิ่มไฟล์เสียงก่อนบันทึก' 
+        });
+        return;
+      }
+      if (!validateFileType(audioFile, 'audio')) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'ไฟล์เสียงไม่ถูกต้อง กรุณาเลือกไฟล์ WAV, MP3 หรือ M4A เท่านั้น' 
+        });
+        return;
+      }
+    }
+
+    if (predictMode === 'both') {
+      if (!uploadedFile) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'กรุณาเพิ่มไฟล์ภาพก่อนบันทึก' 
+        });
+        return;
+      }
+      if (!audioFile) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'กรุณาเพิ่มไฟล์เสียงก่อนบันทึก' 
+        });
+        return;
+      }
+      if (!validateFileType(uploadedFile, 'image')) {
+        setSaveStatus({ 
+          type: 'error', 
+          message: 'ไฟล์ภาพไม่ถูกต้อง กรุณาเลือกไฟล์ JPG, PNG หรือ GIF เท่านั้น' 
+        });
+        return;
+      }
+      if (!validateFileType(audioFile, 'audio')) {
         setSaveStatus({ 
           type: 'error', 
           message: 'ไฟล์เสียงไม่ถูกต้อง กรุณาเลือกไฟล์ WAV, MP3 หรือ M4A เท่านั้น' 
@@ -898,7 +965,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
             <button 
               className={`save-btn ${isSaving ? 'saving' : ''}`}
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !canSave()}
+              title={!canSave() ? getSaveDisabledReason() : ''}
             >
               {isSaving ? (
                 <div className="loading-spinner"></div>

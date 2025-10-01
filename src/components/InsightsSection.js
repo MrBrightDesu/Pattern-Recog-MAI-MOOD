@@ -211,3 +211,4 @@ const InsightsSection = ({ data, stats }) => {
 };
 
 export default InsightsSection;
+

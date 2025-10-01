@@ -51,30 +51,6 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     return emotionColors[emotion] || emotionColors['neutral'];
   };
 
-  // ฟังก์ชันสำหรับกำหนด gradient ตามอารมณ์
-  const getEmotionGradient = (emotion) => {
-    const emotionGradients = {
-      // อารมณ์บวก - สีส้ม
-      'happiness': 'linear-gradient(135deg, #ff6b35, #ff8c42, #ffa726)',
-      'surprise': 'linear-gradient(135deg, #ff8c42, #ffb74d, #ffcc80)',
-      
-      // อารมณ์ลบ - สีม่วง
-      'sadness': 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
-      'anger': 'linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)',
-      'fear': 'linear-gradient(135deg, #a855f7, #c084fc, #d8b4fe)',
-      'disgust': 'linear-gradient(135deg, #9333ea, #a855f7, #c084fc)',
-      
-      // อารมณ์ปกติ - สีฟ้า
-      'neutral': 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)',
-      
-      // Backward compatibility
-      'happy': 'linear-gradient(135deg, #ff6b35, #ff8c42, #ffa726)',
-      'sad': 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
-      'angry': 'linear-gradient(135deg, #7c3aed, #9333ea, #a855f7)'
-    };
-    
-    return emotionGradients[emotion] || emotionGradients['neutral'];
-  };
 
   // ฟังก์ชันสำหรับกำหนด emoji ตามอารมณ์
   const getEmoji = (emotion) => {

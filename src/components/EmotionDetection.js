@@ -260,10 +260,12 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       if (!validateFileType(audioFile, 'audio')) return 'ไฟล์เสียงไม่ถูกต้อง';
     }
     if (predictMode === 'both') {
+      // ตรวจสอบไฟล์ภาพก่อน
       if (!uploadedFile) return 'กรุณาเพิ่มไฟล์ภาพก่อนบันทึก';
+      if (uploadedFile && !validateFileType(uploadedFile, 'image')) return 'ไฟล์ภาพไม่ถูกต้อง';
+      // ตรวจสอบไฟล์เสียง
       if (!audioFile) return 'กรุณาเพิ่มไฟล์เสียงก่อนบันทึก';
-      if (!validateFileType(uploadedFile, 'image')) return 'ไฟล์ภาพไม่ถูกต้อง';
-      if (!validateFileType(audioFile, 'audio')) return 'ไฟล์เสียงไม่ถูกต้อง';
+      if (audioFile && !validateFileType(audioFile, 'audio')) return 'ไฟล์เสียงไม่ถูกต้อง';
     }
     return '';
   };
@@ -862,6 +864,24 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ข้อความแจ้งเตือนไฟล์ผิดประเภทสำหรับโหมดทั้งคู่ */}
+      {predictMode === 'both' && (uploadedFile || audioFile) && (
+        <div className="file-validation-warnings">
+          {uploadedFile && !validateFileType(uploadedFile, 'image') && (
+            <div className="file-validation-warning error">
+              <Image className="warning-icon" />
+              <span>ไฟล์ภาพไม่ถูกต้อง กรุณาเลือกไฟล์ JPG, PNG หรือ GIF</span>
+            </div>
+          )}
+          {audioFile && !validateFileType(audioFile, 'audio') && (
+            <div className="file-validation-warning error">
+              <Volume2 className="warning-icon" />
+              <span>ไฟล์เสียงไม่ถูกต้อง กรุณาเลือกไฟล์ WAV, MP3 หรือ M4A</span>
+            </div>
+          )}
         </div>
       )}
 

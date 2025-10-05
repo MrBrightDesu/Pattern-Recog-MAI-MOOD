@@ -10,7 +10,6 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [result, setResult] = useState(null);
-  const [lastResponseJson, setLastResponseJson] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [stream, setStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
@@ -28,6 +27,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const recordingSampleRateRef = useRef(44100);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [audioDebug, setAudioDebug] = useState({ durationSec: null, sampleRate: null, sizeKB: null });
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const audioInputRef = useRef(null);
@@ -100,10 +100,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       let data;
       if (contentType.includes('application/json')) {
         data = await res.json();
-        try { setLastResponseJson(JSON.stringify(data, null, 2)); } catch {}
       } else {
         const text = await res.text();
-        setLastResponseJson(text);
         throw new Error(`Unexpected response (${res.status}): ${text.slice(0, 120)}...`);
       }
 
@@ -126,9 +124,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     } catch (err) {
       console.error(err);
       setResult({ emotion: err.message || "เกิดข้อผิดพลาด", emoji: "⚠️" });
-      if (!lastResponseJson) {
-        try { setLastResponseJson(JSON.stringify({ error: err.message }, null, 2)); } catch {}
-      }
+      
     } finally {
       setIsDetecting(false);
     }
@@ -172,6 +168,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     }
     
     setAudioFile(file);
+    // best-effort debug for uploaded audio
+    computeAudioDebug(file);
     if (predictMode === 'audio' || predictMode === 'both') {
       await analyzeFile(uploadedFile, file);
     }
@@ -239,6 +237,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       const wavBlob = buildWavBlobFromFloat32(floatBuffers, sampleRate);
       const file = new File([wavBlob], 'recording.wav', { type: 'audio/wav' });
       setAudioFile(file);
+      computeAudioDebug(file, sampleRate);
 
       // Cleanup refs
       audioContextRef.current = null;
@@ -252,6 +251,31 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       }
     } finally {
       setIsRecording(false);
+    }
+  };
+
+  // Compute duration, sample rate, and size for audio debug
+  const computeAudioDebug = async (file, fallbackSampleRate) => {
+    try {
+      const sizeKB = Math.round((file.size / 1024) * 10) / 10;
+      let sampleRate = fallbackSampleRate || null;
+      let durationSec = null;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioContextClass();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      durationSec = Math.round(audioBuffer.duration * 10) / 10;
+      sampleRate = audioBuffer.sampleRate;
+      await ctx.close();
+
+      setAudioDebug({ durationSec, sampleRate, sizeKB });
+    } catch (e) {
+      setAudioDebug({
+        durationSec: null,
+        sampleRate: fallbackSampleRate || null,
+        sizeKB: Math.round((file.size / 1024) * 10) / 10,
+      });
     }
   };
 
@@ -325,7 +349,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setResult(null);
     setUploadedFile(null);
     setAudioFile(null);
-    setLastResponseJson('');
+    
     stopCamera();
     if (onEmotionChange) onEmotionChange('neutral');
   };
@@ -800,6 +824,12 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
                   <div className="file-info">
                     <h4>ไฟล์เสียง</h4>
                     <p>{audioFile.name}</p>
+                    <audio controls src={URL.createObjectURL(audioFile)} style={{ marginTop: 8, width: '100%' }} />
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
+                      {audioDebug.sampleRate ? `Sample Rate: ${audioDebug.sampleRate} Hz` : 'Sample Rate: -'}
+                      {`  |  Size: ${audioDebug.sizeKB ?? '-'} KB`}
+                      {`  |  Duration: ${audioDebug.durationSec ?? '-'} s`}
+                    </div>
                   </div>
                 </div>
                 <button 
@@ -884,6 +914,12 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
                   <div className="file-info">
                     <h4>ไฟล์เสียง</h4>
                     <p>{audioFile.name}</p>
+                    <audio controls src={URL.createObjectURL(audioFile)} style={{ marginTop: 8, width: '100%' }} />
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
+                      {audioDebug.sampleRate ? `Sample Rate: ${audioDebug.sampleRate} Hz` : 'Sample Rate: -'}
+                      {`  |  Size: ${audioDebug.sizeKB ?? '-'} KB`}
+                      {`  |  Duration: ${audioDebug.durationSec ?? '-'} s`}
+                    </div>
                   </div>
                 </div>
                 <button 
@@ -1125,15 +1161,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       )}
 
 
-      {lastResponseJson && (
-        <div className="emotion-result" style={{ marginTop: 16 }}>
-          <h3>Response JSON (debug)</h3>
-          <pre style={{
-            background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8,
-            maxHeight: 240, overflow: 'auto', fontSize: 12
-          }}>{lastResponseJson}</pre>
-        </div>
-      )}
+      
 
       {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />

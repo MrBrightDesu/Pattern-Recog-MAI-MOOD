@@ -6,7 +6,7 @@ from torchaudio.transforms import MelSpectrogram, MFCC
 import torch.nn.functional as F
 
 # Emotion classes matching the CRNN model training
-classes = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
+classes = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sadness', 'surprise']
 
 # ============================================
 # EmotionCRNN Model Definition

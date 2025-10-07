@@ -10,7 +10,6 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [result, setResult] = useState(null);
-  const [lastResponseJson, setLastResponseJson] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [stream, setStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
@@ -19,8 +18,16 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
+  // Web Audio API recording states (true WAV without ffmpeg)
+  const audioContextRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const sourceNodeRef = useRef(null);
+  const processorNodeRef = useRef(null);
+  const recordedBuffersRef = useRef([]);
+  const recordingSampleRateRef = useRef(44100);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [audioDebug, setAudioDebug] = useState({ durationSec: null, sampleRate: null, sizeKB: null });
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const audioInputRef = useRef(null);
@@ -93,10 +100,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       let data;
       if (contentType.includes('application/json')) {
         data = await res.json();
-        try { setLastResponseJson(JSON.stringify(data, null, 2)); } catch {}
       } else {
         const text = await res.text();
-        setLastResponseJson(text);
         throw new Error(`Unexpected response (${res.status}): ${text.slice(0, 120)}...`);
       }
 
@@ -119,9 +124,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     } catch (err) {
       console.error(err);
       setResult({ emotion: err.message || "เกิดข้อผิดพลาด", emoji: "⚠️" });
-      if (!lastResponseJson) {
-        try { setLastResponseJson(JSON.stringify({ error: err.message }, null, 2)); } catch {}
-      }
+      
     } finally {
       setIsDetecting(false);
     }
@@ -165,6 +168,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     }
     
     setAudioFile(file);
+    // best-effort debug for uploaded audio
+    computeAudioDebug(file);
     if (predictMode === 'audio' || predictMode === 'both') {
       await analyzeFile(uploadedFile, file);
     }
@@ -173,24 +178,29 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks = [];
-      recorder.ondataavailable = (event) => {
-        chunks.push(event.data);
+      // Create AudioContext (sample rate may vary per device)
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      recordingSampleRateRef.current = audioContext.sampleRate;
+      recordedBuffersRef.current = [];
+
+      processor.onaudioprocess = (e) => {
+        const input = e.inputBuffer.getChannelData(0);
+        // Clone the buffer to detach from the underlying AudioBuffer
+        recordedBuffersRef.current.push(new Float32Array(input));
       };
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
-        const file = new File([blob], 'recording.wav', { type: 'audio/wav' });
-        setAudioFile(file);
-        setAudioChunks([]);
-        stream.getTracks().forEach(track => track.stop());
-        if (predictMode === 'audio' || predictMode === 'both') {
-          analyzeFile(uploadedFile, file);
-        }
-      };
-      setMediaRecorder(recorder);
-      setAudioChunks(chunks);
-      recorder.start();
+
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+
+      audioContextRef.current = audioContext;
+      mediaStreamRef.current = stream;
+      sourceNodeRef.current = source;
+      processorNodeRef.current = processor;
+
       setIsRecording(true);
     } catch (error) {
       console.error('Error accessing microphone:', error);
@@ -199,9 +209,137 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
+    if (!isRecording) return;
+
+    try {
+      // Disconnect nodes
+      if (processorNodeRef.current) {
+        processorNodeRef.current.disconnect();
+      }
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.disconnect();
+      }
+
+      // Stop stream tracks
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+
+      // Close audio context
+      if (audioContextRef.current && typeof audioContextRef.current.close === 'function') {
+        audioContextRef.current.close().catch(() => {});
+      }
+
+      // Build WAV from recorded float buffers
+      const floatBuffers = recordedBuffersRef.current || [];
+      const sampleRate = recordingSampleRateRef.current || 44100;
+
+      const wavBlob = buildWavBlobFromFloat32(floatBuffers, sampleRate);
+      const file = new File([wavBlob], 'recording.wav', { type: 'audio/wav' });
+      setAudioFile(file);
+      computeAudioDebug(file, sampleRate);
+
+      // Cleanup refs
+      audioContextRef.current = null;
+      mediaStreamRef.current = null;
+      sourceNodeRef.current = null;
+      processorNodeRef.current = null;
+      recordedBuffersRef.current = [];
+
+      if (predictMode === 'audio' || predictMode === 'both') {
+        analyzeFile(uploadedFile, file);
+      }
+    } finally {
       setIsRecording(false);
+    }
+  };
+
+  // Compute duration, sample rate, and size for audio debug
+  const computeAudioDebug = async (file, fallbackSampleRate) => {
+    try {
+      const sizeKB = Math.round((file.size / 1024) * 10) / 10;
+      let sampleRate = fallbackSampleRate || null;
+      let durationSec = null;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioContextClass();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      durationSec = Math.round(audioBuffer.duration * 10) / 10;
+      sampleRate = audioBuffer.sampleRate;
+      await ctx.close();
+
+      setAudioDebug({ durationSec, sampleRate, sizeKB });
+    } catch (e) {
+      setAudioDebug({
+        durationSec: null,
+        sampleRate: fallbackSampleRate || null,
+        sizeKB: Math.round((file.size / 1024) * 10) / 10,
+      });
+    }
+  };
+
+  // Build a WAV Blob (PCM 16-bit, mono) from Float32 buffers
+  const buildWavBlobFromFloat32 = (float32Buffers, sampleRate) => {
+    // Concatenate Float32 chunks
+    let totalLength = 0;
+    for (const buf of float32Buffers) totalLength += buf.length;
+    const merged = new Float32Array(totalLength);
+    let offset = 0;
+    for (const buf of float32Buffers) {
+      merged.set(buf, offset);
+      offset += buf.length;
+    }
+
+    // Convert Float32 [-1,1] to 16-bit PCM
+    const bufferLength = merged.length;
+    const pcm16 = new Int16Array(bufferLength);
+    for (let i = 0; i < bufferLength; i++) {
+      let s = Math.max(-1, Math.min(1, merged[i]));
+      pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+
+    // Create WAV header for mono, 16-bit PCM
+    const bytesPerSample = 2;
+    const numChannels = 1;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = pcm16.byteLength;
+    const headerSize = 44;
+    const buffer = new ArrayBuffer(headerSize + dataSize);
+    const view = new DataView(buffer);
+
+    // RIFF chunk descriptor
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+
+    // fmt subchunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+    view.setUint16(20, 1, true);  // AudioFormat (1 = PCM)
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true); // BitsPerSample
+
+    // data subchunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    // PCM samples
+    let idx = 44;
+    for (let i = 0; i < pcm16.length; i++, idx += 2) {
+      view.setInt16(idx, pcm16[i], true);
+    }
+
+    return new Blob([view], { type: 'audio/wav' });
+  };
+
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
     }
   };
 
@@ -211,7 +349,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setResult(null);
     setUploadedFile(null);
     setAudioFile(null);
-    setLastResponseJson('');
+    
     stopCamera();
     if (onEmotionChange) onEmotionChange('neutral');
   };
@@ -686,6 +824,12 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
                   <div className="file-info">
                     <h4>ไฟล์เสียง</h4>
                     <p>{audioFile.name}</p>
+                    <audio controls src={URL.createObjectURL(audioFile)} style={{ marginTop: 8, width: '100%' }} />
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
+                      {audioDebug.sampleRate ? `Sample Rate: ${audioDebug.sampleRate} Hz` : 'Sample Rate: -'}
+                      {`  |  Size: ${audioDebug.sizeKB ?? '-'} KB`}
+                      {`  |  Duration: ${audioDebug.durationSec ?? '-'} s`}
+                    </div>
                   </div>
                 </div>
                 <button 
@@ -770,6 +914,12 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
                   <div className="file-info">
                     <h4>ไฟล์เสียง</h4>
                     <p>{audioFile.name}</p>
+                    <audio controls src={URL.createObjectURL(audioFile)} style={{ marginTop: 8, width: '100%' }} />
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>
+                      {audioDebug.sampleRate ? `Sample Rate: ${audioDebug.sampleRate} Hz` : 'Sample Rate: -'}
+                      {`  |  Size: ${audioDebug.sizeKB ?? '-'} KB`}
+                      {`  |  Duration: ${audioDebug.durationSec ?? '-'} s`}
+                    </div>
                   </div>
                 </div>
                 <button 
@@ -1011,15 +1161,7 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
       )}
 
 
-      {lastResponseJson && (
-        <div className="emotion-result" style={{ marginTop: 16 }}>
-          <h3>Response JSON (debug)</h3>
-          <pre style={{
-            background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8,
-            maxHeight: 240, overflow: 'auto', fontSize: 12
-          }}>{lastResponseJson}</pre>
-        </div>
-      )}
+      
 
       {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />

@@ -28,12 +28,9 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
   const recordingSampleRateRef = useRef(44100);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
-<<<<<<< HEAD
   const [audioDebug, setAudioDebug] = useState({ durationSec: null, sampleRate: null, sizeKB: null });
-=======
   const [recommendedActivities, setRecommendedActivities] = useState([]);
   const [showActivities, setShowActivities] = useState(false);
->>>>>>> origin/kim2.0
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const audioInputRef = useRef(null);
@@ -414,13 +411,8 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
     setResult(null);
     setUploadedFile(null);
     setAudioFile(null);
-<<<<<<< HEAD
-    
-=======
-    setLastResponseJson('');
     setRecommendedActivities([]);
     setShowActivities(false);
->>>>>>> origin/kim2.0
     stopCamera();
     if (onEmotionChange) onEmotionChange('neutral');
   };
@@ -569,13 +561,10 @@ const EmotionDetection = ({ onEmotionDetected, currentEmotion, onEmotionChange }
         faceCoords: result.coords || null,
         hasImage: !!uploadedFile,
         hasAudio: !!audioFile,
-<<<<<<< HEAD
         // เก็บข้อมูลชนิดของไฟล์
         imageFileType: uploadedFile ? uploadedFile.type : null,
         audioFileType: audioFile ? audioFile.type : null,
-=======
         recommendedActivities: recommendedActivities,
->>>>>>> origin/kim2.0
         createdAt: new Date().toISOString(),
         // ข้อมูลเพิ่มเติม
         deviceInfo: {
